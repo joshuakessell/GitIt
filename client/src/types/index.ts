@@ -38,3 +38,36 @@ export interface LanguageOption {
   value: string;
   label: string;
 }
+
+// Repository analysis types
+export interface RepositoryAnalysisRequest {
+  repositoryUrl?: string;
+  repositoryName: string;
+  githubUsername?: string;
+}
+
+export interface RepositoryAnalysisUploadRequest {
+  repositoryName: string;
+  file: File;
+}
+
+export interface RepositoryAnalysisResponse {
+  id: number;
+  repositoryName: string;
+  repositoryUrl?: string;
+  technicalAnalysis: string;
+  userManual: string;
+  analyzedFiles: number;
+  totalFiles: number;
+  analysisSummary?: string;
+  createdAt?: string;
+}
+
+export interface RepositoryAnalysisListItem {
+  id: number;
+  repositoryName: string;
+  repositoryUrl?: string;
+  analyzedFiles: number;
+  totalFiles: number;
+  createdAt: string;
+}

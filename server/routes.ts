@@ -2,12 +2,22 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { huggingFaceAPI } from "./huggingface-api";
+import { openaiAPI } from "./openai-api";
+import { githubAPI } from "./github-api";
+import { extractFilesFromZip, cleanupTempFiles } from "./file-utils";
+import uploadMiddleware, { handleUploadErrors } from "./upload-middleware";
+import fs from "fs";
+import path from "path";
+import { promisify } from "util";
 import { 
   codeToTextRequestSchema, 
-  textToCodeRequestSchema, 
-  explanationSettingsSchema 
+  textToCodeRequestSchema,
+  repositoryAnalysisRequestSchema,
+  explanationSettingsSchema
 } from "@shared/schema";
 import { log } from "./vite";
+
+const readFile = promisify(fs.readFile);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Code to text explanation route
@@ -126,6 +136,215 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     return res.json({ sample });
+  });
+
+  // Repository analysis endpoints
+  
+  // Upload and analyze zip file
+  app.post(
+    "/api/analyze/upload", 
+    uploadMiddleware.single('repository'),
+    handleUploadErrors,
+    async (req, res) => {
+      try {
+        // Check if file was uploaded
+        if (!req.file) {
+          return res.status(400).json({ 
+            message: "No file uploaded",
+            details: "Please upload a zip file containing your repository"
+          });
+        }
+        
+        const zipFilePath = req.file.path;
+        const repositoryName = req.body.repositoryName || path.basename(zipFilePath, path.extname(zipFilePath));
+        
+        // Read the uploaded zip file
+        const zipBuffer = await readFile(zipFilePath);
+        
+        // Extract the files from the zip
+        const files = await extractFilesFromZip(zipBuffer);
+        
+        // Check if we have any files to analyze
+        if (Object.keys(files).length === 0) {
+          cleanupTempFiles(zipFilePath);
+          return res.status(400).json({
+            message: "No analyzable files found",
+            details: "The zip file did not contain any code files that could be analyzed"
+          });
+        }
+        
+        // Analyze the repository using OpenAI
+        const analysis = await openaiAPI.analyzeRepository(files, repositoryName);
+        
+        // Store the analysis in the database
+        const savedAnalysis = await storage.saveRepositoryAnalysis({
+          repositoryName,
+          repositoryUrl: null,
+          technicalAnalysis: analysis.technicalAnalysis,
+          userManual: analysis.userManual,
+          analysisSummary: analysis.analysisSummary,
+          analyzedFiles: analysis.analyzedFiles,
+          totalFiles: analysis.totalFiles,
+          metadata: null,
+          userId: null // Will be set when authentication is implemented
+        });
+        
+        // Cleanup temp files
+        cleanupTempFiles(zipFilePath);
+        
+        // Return the analysis results
+        return res.json({
+          id: savedAnalysis.id,
+          repositoryName: savedAnalysis.repositoryName,
+          technicalAnalysis: savedAnalysis.technicalAnalysis,
+          userManual: savedAnalysis.userManual,
+          analyzedFiles: savedAnalysis.analyzedFiles,
+          totalFiles: savedAnalysis.totalFiles,
+          analysisSummary: savedAnalysis.analysisSummary
+        });
+      } catch (error) {
+        log(`Error in /api/analyze/upload: ${error}`, "api");
+        return res.status(500).json({
+          message: "Failed to analyze repository",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    }
+  );
+  
+  // Analyze GitHub repository by URL
+  app.post("/api/analyze/github", async (req, res) => {
+    try {
+      const parseResult = repositoryAnalysisRequestSchema.safeParse(req.body);
+      
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data",
+          errors: parseResult.error.format() 
+        });
+      }
+      
+      const { repositoryUrl, repositoryName } = parseResult.data;
+      
+      if (!repositoryUrl) {
+        return res.status(400).json({ 
+          message: "Repository URL is required" 
+        });
+      }
+      
+      // Set GitHub token if available
+      if (req.headers.authorization) {
+        const token = req.headers.authorization.replace('Bearer ', '');
+        githubAPI.setToken(token);
+      }
+      
+      // Fetch files from the GitHub repository
+      const files = await githubAPI.fetchRepositoryFilesFromUrl(repositoryUrl);
+      
+      // Check if we have any files to analyze
+      if (Object.keys(files).length === 0) {
+        return res.status(400).json({
+          message: "No analyzable files found",
+          details: "The repository did not contain any code files that could be analyzed"
+        });
+      }
+      
+      // Analyze the repository using OpenAI
+      const actualRepoName = repositoryName || repositoryUrl.split('/').pop() || 'Repository';
+      const analysis = await openaiAPI.analyzeRepository(files, actualRepoName);
+      
+      // Store the analysis in the database
+      const savedAnalysis = await storage.saveRepositoryAnalysis({
+        repositoryName: actualRepoName,
+        repositoryUrl,
+        technicalAnalysis: analysis.technicalAnalysis,
+        userManual: analysis.userManual,
+        analysisSummary: analysis.analysisSummary,
+        analyzedFiles: analysis.analyzedFiles,
+        totalFiles: analysis.totalFiles,
+        metadata: null,
+        userId: null // Will be set when authentication is implemented
+      });
+      
+      // Return the analysis results
+      return res.json({
+        id: savedAnalysis.id,
+        repositoryName: savedAnalysis.repositoryName,
+        repositoryUrl: savedAnalysis.repositoryUrl,
+        technicalAnalysis: savedAnalysis.technicalAnalysis,
+        userManual: savedAnalysis.userManual,
+        analyzedFiles: savedAnalysis.analyzedFiles,
+        totalFiles: savedAnalysis.totalFiles,
+        analysisSummary: savedAnalysis.analysisSummary
+      });
+    } catch (error) {
+      log(`Error in /api/analyze/github: ${error}`, "api");
+      return res.status(500).json({
+        message: "Failed to analyze GitHub repository",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // Get analysis history
+  app.get("/api/analyses", async (req, res) => {
+    try {
+      // In a real app, we would filter by the logged-in user
+      const analyses = await storage.getLatestRepositoryAnalyses(10);
+      
+      // Map to simplified response format
+      const response = analyses.map(analysis => ({
+        id: analysis.id,
+        repositoryName: analysis.repositoryName,
+        repositoryUrl: analysis.repositoryUrl,
+        createdAt: analysis.createdAt,
+        analyzedFiles: analysis.analyzedFiles,
+        totalFiles: analysis.totalFiles,
+      }));
+      
+      return res.json(response);
+    } catch (error) {
+      log(`Error in GET /api/analyses: ${error}`, "api");
+      return res.status(500).json({
+        message: "Failed to fetch analysis history",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // Get a specific analysis by ID
+  app.get("/api/analyses/:id", async (req, res) => {
+    try {
+      const analysisId = parseInt(req.params.id);
+      
+      if (isNaN(analysisId)) {
+        return res.status(400).json({ message: "Invalid analysis ID" });
+      }
+      
+      const analysis = await storage.getRepositoryAnalysis(analysisId);
+      
+      if (!analysis) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+      
+      return res.json({
+        id: analysis.id,
+        repositoryName: analysis.repositoryName,
+        repositoryUrl: analysis.repositoryUrl,
+        technicalAnalysis: analysis.technicalAnalysis,
+        userManual: analysis.userManual,
+        analyzedFiles: analysis.analyzedFiles,
+        totalFiles: analysis.totalFiles,
+        analysisSummary: analysis.analysisSummary,
+        createdAt: analysis.createdAt
+      });
+    } catch (error) {
+      log(`Error in GET /api/analyses/:id: ${error}`, "api");
+      return res.status(500).json({
+        message: "Failed to fetch analysis",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
   });
 
   const httpServer = createServer(app);
