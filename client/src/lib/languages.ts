@@ -1,6 +1,7 @@
 import { LanguageOption } from "@/types";
 
 export const languages: LanguageOption[] = [
+  { value: "auto", label: "Detect Language" },
   { value: "javascript", label: "JavaScript" },
   { value: "python", label: "Python" },
   { value: "java", label: "Java" },

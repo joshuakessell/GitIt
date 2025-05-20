@@ -36,7 +36,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const defaultSettings = explanationSettingsSchema.parse({});
       const mergedSettings = { ...defaultSettings, ...settings };
       
-      const explanation = await huggingFaceAPI.explainCode(
+      // Use OpenAI API for code explanations instead of Hugging Face
+      const explanation = await openaiAPI.explainCode(
         code,
         language,
         mergedSettings.detailLevel
@@ -69,7 +70,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { description, language } = parseResult.data;
       
-      const code = await huggingFaceAPI.generateCode(description, language);
+      // Use OpenAI API for code generation instead of Hugging Face
+      const code = await openaiAPI.generateCode(description, language);
       
       return res.json({ code });
     } catch (error) {

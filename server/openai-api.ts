@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import { log } from "./vite";
 import fs from "fs";
 import path from "path";
-import { RepositoryAnalysisResponse } from "@shared/schema";
+import { ExplanationSettings, RepositoryAnalysisResponse } from "@shared/schema";
 
 // The newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const DEFAULT_MODEL = "gpt-4o";
@@ -18,6 +18,123 @@ export class OpenAIAPI {
     this.client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
+  }
+
+  /**
+   * Explain code using OpenAI
+   * @param code The code to explain
+   * @param language The programming language (or 'auto' for auto-detection)
+   * @param detailLevel The level of detail for the explanation
+   * @returns A promise resolving to the code explanation
+   */
+  async explainCode(
+    code: string,
+    language: string,
+    detailLevel: "basic" | "standard" | "advanced" = "standard"
+  ): Promise<string> {
+    try {
+      const languagePrompt = language === 'auto' 
+        ? "Please detect the programming language and explain the following code:" 
+        : `Please explain the following ${language} code:`;
+
+      let detailInstructions = "";
+      
+      if (detailLevel === "basic") {
+        detailInstructions = "Explain this in simple terms that a beginner would understand. Avoid technical jargon.";
+      } else if (detailLevel === "advanced") {
+        detailInstructions = "Provide a detailed technical explanation including time/space complexity analysis, edge cases, and potential optimizations.";
+      } else {
+        detailInstructions = "Provide a balanced explanation with enough technical details for intermediate programmers.";
+      }
+
+      const response = await this.client.chat.completions.create({
+        model: DEFAULT_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: "You are a helpful assistant that explains code in plain English. Your explanations are clear, concise, and easy to understand."
+          },
+          {
+            role: "user",
+            content: `
+${languagePrompt}
+
+\`\`\`${language !== 'auto' ? language : ''}
+${code}
+\`\`\`
+
+${detailInstructions}
+
+Your explanation should include:
+1. What the code does
+2. How it works step by step
+3. Any important patterns or techniques used
+4. Time and space complexity analysis
+5. Potential edge cases or limitations
+6. Possible improvements
+
+Format your explanation using Markdown.
+`
+          }
+        ],
+        temperature: 0.3,
+      });
+
+      return response.choices[0].message.content || "No explanation generated.";
+    } catch (error) {
+      log(`Error explaining code: ${error}`, "openai");
+      throw error;
+    }
+  }
+
+  /**
+   * Generate code from a text description
+   * @param description The natural language description
+   * @param language The target programming language
+   * @returns A promise resolving to the generated code
+   */
+  async generateCode(description: string, language: string): Promise<string> {
+    try {
+      const response = await this.client.chat.completions.create({
+        model: DEFAULT_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: "You are a skilled programmer who writes clean, efficient and well-documented code."
+          },
+          {
+            role: "user",
+            content: `
+Please write ${language} code based on this description:
+
+Description: ${description}
+
+Write clean, efficient, and well-commented ${language} code that implements this functionality. 
+The code should be production-ready and follow best practices for ${language}.
+
+Format your response with just the code in a code block.
+`
+          }
+        ],
+        temperature: 0.2,
+      });
+
+      const content = response.choices[0].message.content || "";
+      
+      // Extract code from markdown code blocks if present
+      const codeBlockRegex = new RegExp(`\`\`\`(?:${language})?([\\s\\S]*?)\`\`\``, "i");
+      const match = content.match(codeBlockRegex);
+      
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+      
+      // Return the full content if no code block is found
+      return content;
+    } catch (error) {
+      log(`Error generating code: ${error}`, "openai");
+      throw error;
+    }
   }
   
   /**
