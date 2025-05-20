@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -39,6 +39,33 @@ export const insertExplanationSchema = createInsertSchema(explanations).pick({
   language: true,
 });
 
+// Repository analysis table
+export const repositoryAnalyses = pgTable("repository_analyses", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  repositoryName: text("repository_name").notNull(),
+  repositoryUrl: text("repository_url"),
+  technicalAnalysis: text("technical_analysis").notNull(),
+  userManual: text("user_manual").notNull(),
+  analysisSummary: text("analysis_summary"),
+  analyzedFiles: integer("analyzed_files").notNull(),
+  totalFiles: integer("total_files").notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertRepositoryAnalysisSchema = createInsertSchema(repositoryAnalyses).pick({
+  userId: true,
+  repositoryName: true,
+  repositoryUrl: true,
+  technicalAnalysis: true,
+  userManual: true,
+  analysisSummary: true,
+  analyzedFiles: true,
+  totalFiles: true,
+  metadata: true,
+});
+
 // Settings for code explanation
 export const explanationSettingsSchema = z.object({
   detailLevel: z.enum(["basic", "standard", "advanced"]).default("standard"),
@@ -62,12 +89,34 @@ export const textToCodeRequestSchema = z.object({
   language: z.string().min(1, "Language is required"),
 });
 
+// Repository analysis request schema
+export const repositoryAnalysisRequestSchema = z.object({
+  repositoryUrl: z.string().optional(),
+  repositoryName: z.string(),
+  githubUsername: z.string().optional(),
+});
+
+// Repository analysis response
+export const repositoryAnalysisResponseSchema = z.object({
+  repositoryName: z.string(),
+  technicalAnalysis: z.string(),
+  userManual: z.string(),
+  analyzedFiles: z.number(),
+  totalFiles: z.number(),
+  analysisSummary: z.string().optional(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
 export type InsertExplanation = z.infer<typeof insertExplanationSchema>;
 export type Explanation = typeof explanations.$inferSelect;
 
+export type InsertRepositoryAnalysis = z.infer<typeof insertRepositoryAnalysisSchema>;
+export type RepositoryAnalysis = typeof repositoryAnalyses.$inferSelect;
+
 export type ExplanationSettings = z.infer<typeof explanationSettingsSchema>;
 export type CodeToTextRequest = z.infer<typeof codeToTextRequestSchema>;
 export type TextToCodeRequest = z.infer<typeof textToCodeRequestSchema>;
+export type RepositoryAnalysisRequest = z.infer<typeof repositoryAnalysisRequestSchema>;
+export type RepositoryAnalysisResponse = z.infer<typeof repositoryAnalysisResponseSchema>;
