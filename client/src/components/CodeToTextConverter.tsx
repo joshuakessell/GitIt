@@ -270,6 +270,13 @@ export function CodeToTextConverter() {
               className="mb-4"
               aria-label="Code editor"
             />
+            
+            {/* Advanced Options Inside Code Input Box */}
+            <div className="mb-4 bg-gray-50 p-3 rounded-md dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+              <h3 className="text-sm font-medium mb-2">Advanced Settings</h3>
+              <AdvancedOptions settings={settings} onSettingsChange={setSettings} />
+            </div>
+            
             <div className="mt-4 flex justify-between">
               <Button
                 variant="link"
@@ -405,9 +412,6 @@ export function CodeToTextConverter() {
           </div>
         </div>
       </div>
-
-      {/* Advanced Options Section */}
-      <AdvancedOptions settings={settings} onSettingsChange={setSettings} />
     </div>
   );
 }

@@ -37,14 +37,73 @@ export class OpenAIAPI {
         ? "Please detect the programming language and explain the following code:" 
         : `Please explain the following ${language} code:`;
 
+      // Create significantly different instruction sets for each detail level
+      let systemPrompt = "";
       let detailInstructions = "";
+      let additionalRequirements = "";
       
       if (detailLevel === "basic") {
-        detailInstructions = "Explain this in simple terms that a beginner would understand. Avoid technical jargon.";
+        systemPrompt = "You are a programming teacher for beginners. Your explanations avoid technical jargon and focus on simple concepts. Use analogies and everyday examples to explain code.";
+        
+        detailInstructions = `
+Explain this in simple terms that a complete beginner would understand. 
+- Avoid technical jargon completely.
+- Use everyday analogies and relatable examples.
+- Don't assume any prior programming knowledge.
+- Focus only on what the code does in plain language.
+- Keep the explanation concise and to the point.
+- Don't include time/space complexity analysis.
+`;
+        
+        additionalRequirements = `
+Your explanation should ONLY include:
+1. What the code does in very simple terms
+2. A basic explanation of how it works using everyday analogies
+3. An example of when this code might be used in real life
+
+Format your explanation using simple language a non-programmer could understand.
+`;
       } else if (detailLevel === "advanced") {
-        detailInstructions = "Provide a detailed technical explanation including time/space complexity analysis, edge cases, and potential optimizations.";
+        systemPrompt = "You are a senior software engineer conducting a detailed code review. Your explanations are thorough, technical, and cover implementation details, optimizations, and best practices.";
+        
+        detailInstructions = `
+Provide a comprehensive technical analysis of this code:
+- Include detailed time and space complexity analysis with Big O notation
+- Thoroughly examine edge cases and potential failure points
+- Suggest specific optimizations with code examples
+- Evaluate the code against industry best practices
+- Highlight any potential security vulnerabilities or performance bottlenecks
+- Include references to relevant design patterns or algorithms
+`;
+        
+        additionalRequirements = `
+Your advanced analysis MUST include all of these sections:
+1. High-level overview of the code's purpose
+2. Detailed algorithmic analysis with time/space complexity
+3. Comprehensive edge case examination
+4. Code quality assessment
+5. Specific refactoring suggestions with code examples
+6. Performance optimization opportunities
+7. Technical debt identification
+
+Format your explanation with clear section headers and technical details.
+`;
       } else {
-        detailInstructions = "Provide a balanced explanation with enough technical details for intermediate programmers.";
+        systemPrompt = "You are a helpful assistant that explains code in plain English for intermediate programmers. Your explanations balance technical accuracy with clear explanations.";
+        
+        detailInstructions = "Provide a balanced explanation with enough technical details for intermediate programmers. Include both conceptual understanding and some implementation details.";
+        
+        additionalRequirements = `
+Your explanation should include:
+1. What the code does
+2. How it works step by step
+3. Any important patterns or techniques used
+4. Basic time and space complexity considerations
+5. Common edge cases or limitations
+6. Possible improvements
+
+Format your explanation using Markdown with clear sections.
+`;
       }
 
       const response = await this.client.chat.completions.create({
@@ -52,7 +111,7 @@ export class OpenAIAPI {
         messages: [
           {
             role: "system",
-            content: "You are a helpful assistant that explains code in plain English. Your explanations are clear, concise, and easy to understand."
+            content: systemPrompt
           },
           {
             role: "user",
@@ -65,19 +124,11 @@ ${code}
 
 ${detailInstructions}
 
-Your explanation should include:
-1. What the code does
-2. How it works step by step
-3. Any important patterns or techniques used
-4. Time and space complexity analysis
-5. Potential edge cases or limitations
-6. Possible improvements
-
-Format your explanation using Markdown.
+${additionalRequirements}
 `
           }
         ],
-        temperature: 0.3,
+        temperature: detailLevel === "basic" ? 0.7 : 0.3, // Higher temperature for more creative basic explanations
       });
 
       return response.choices[0].message.content || "No explanation generated.";
