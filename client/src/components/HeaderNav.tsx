@@ -5,16 +5,28 @@ import {
   Code, 
   Moon, 
   Sun,
-  Github
+  Github,
+  LogOut
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
-interface HeaderNavProps {
-  isLoggedIn?: boolean;
-  username?: string;
+interface AuthData {
+  isAuthenticated: boolean;
+  user?: {
+    id: string;
+    username: string;
+    githubUsername?: string;
+  };
 }
 
-export function HeaderNav({ isLoggedIn = false, username }: HeaderNavProps) {
+export function HeaderNav() {
   const { theme, toggleTheme } = useTheme();
+  
+  // Fetch auth status from server
+  const { data: authData } = useQuery<AuthData>({
+    queryKey: ['/api/auth/user'],
+    retry: false
+  });
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm">
@@ -36,12 +48,23 @@ export function HeaderNav({ isLoggedIn = false, username }: HeaderNavProps) {
               {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
             
-            {isLoggedIn ? (
-              <div className="flex items-center">
-                <span className="text-sm mr-2">{username}</span>
+            {authData?.isAuthenticated ? (
+              <div className="flex items-center space-x-3">
+                <span className="text-sm">{authData.user?.username || "User"}</span>
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback>{username?.[0]?.toUpperCase() || "U"}</AvatarFallback>
+                  <AvatarFallback>
+                    {(authData.user?.username?.[0] || "U").toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.location.href = '/api/auth/logout'}
+                  title="Logout"
+                  aria-label="Logout"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
               </div>
             ) : (
               <div className="flex space-x-2">

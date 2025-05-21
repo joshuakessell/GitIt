@@ -19,7 +19,7 @@ const sessionStore = new PgSession({
   createTableIfMissing: true
 });
 
-export const setupAuth = (app: Express) => {
+export const setupAuth = (app: Express): void => {
   // Configure express-session
   app.use(
     session({
@@ -65,52 +65,52 @@ export const setupAuth = (app: Express) => {
         {
           clientID: process.env.GITHUB_CLIENT_ID,
           clientSecret: process.env.GITHUB_CLIENT_SECRET,
-          callbackURL: callbackURL,
+          callbackURL,
         },
-      // @ts-ignore - Ignoring type issues with GitHub strategy
-      async (accessToken, refreshToken, profile, done) => {
-        try {
-          // Check if user exists
-          const [existingUser] = await db
-            .select()
-            .from(users)
-            .where(eq(users.githubId, profile.id));
+        // @ts-ignore - Ignoring type issues with GitHub strategy
+        async (accessToken: string, refreshToken: string, profile: any, done: any) => {
+          try {
+            // Check if user exists
+            const [existingUser] = await db
+              .select()
+              .from(users)
+              .where(eq(users.githubId, profile.id));
 
-          if (existingUser) {
-            // Update access token
-            await db
-              .update(users)
-              .set({
+            if (existingUser) {
+              // Update access token
+              await db
+                .update(users)
+                .set({
+                  githubAccessToken: accessToken,
+                })
+                .where(eq(users.id, existingUser.id));
+
+              return done(null, existingUser);
+            }
+
+            // Create new user
+            const [newUser] = await db
+              .insert(users)
+              .values({
+                username: profile.username || `github_${profile.id}`,
+                password: '', // No password for OAuth users
+                githubId: profile.id,
+                githubUsername: profile.username,
                 githubAccessToken: accessToken,
               })
-              .where(eq(users.id, existingUser.id));
+              .returning();
 
-            return done(null, existingUser);
+            return done(null, newUser);
+          } catch (error) {
+            log(`Error in GitHub auth strategy: ${error}`, 'auth');
+            return done(error as Error, undefined);
           }
-
-          // Create new user
-          const [newUser] = await db
-            .insert(users)
-            .values({
-              username: profile.username || `github_${profile.id}`,
-              password: '', // No password for OAuth users
-              githubId: profile.id,
-              githubUsername: profile.username,
-              githubAccessToken: accessToken,
-            })
-            .returning();
-
-          return done(null, newUser);
-        } catch (error) {
-          log(`Error in GitHub auth strategy: ${error}`, 'auth');
-          return done(error as Error, undefined);
         }
-      }
-    ))
+      )
+    );
   } else {
     log('GitHub authentication disabled - missing client ID or client secret', 'auth');
   }
-  );
 
   // Auth routes
   app.get('/api/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
@@ -118,18 +118,18 @@ export const setupAuth = (app: Express) => {
   app.get(
     '/api/auth/github/callback',
     passport.authenticate('github', { failureRedirect: '/' }),
-    (req, res) => {
+    (req: Request, res: Response) => {
       res.redirect('/');
     }
   );
 
-  app.get('/api/auth/logout', (req, res) => {
+  app.get('/api/auth/logout', (req: Request, res: Response) => {
     req.logout(() => {
       res.redirect('/');
     });
   });
 
-  app.get('/api/auth/user', (req, res) => {
+  app.get('/api/auth/user', (req: Request, res: Response) => {
     if (req.isAuthenticated()) {
       const user = req.user as any;
       return res.json({
@@ -146,7 +146,7 @@ export const setupAuth = (app: Express) => {
 };
 
 // Middleware to ensure user is authenticated
-export const ensureAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+export const ensureAuthenticated = (req: Request, res: Response, next: NextFunction): void => {
   if (req.isAuthenticated()) {
     return next();
   }
