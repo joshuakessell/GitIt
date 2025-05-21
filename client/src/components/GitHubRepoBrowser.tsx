@@ -123,8 +123,9 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
       return;
     }
 
-    // Basic URL validation
-    if (!repoUrl.includes("github.com")) {
+    // Enhanced URL validation
+    const githubUrlPattern = /^https?:\/\/(www\.)?github\.com\/[\w-]+\/[\w.-]+\/?.*$/;
+    if (!githubUrlPattern.test(repoUrl)) {
       toast({
         title: "Invalid GitHub URL",
         description: "Please enter a valid GitHub repository URL (e.g., https://github.com/username/repo)",
@@ -133,15 +134,20 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
       return;
     }
 
+    // Remove trailing slashes, .git extension, and query parameters
+    const cleanedUrl = repoUrl.replace(/\/+$/, '').replace(/\.git$/, '').split('?')[0];
+
     try {
       // Start analysis animation
       setIsAnalyzing(true);
       setAnalysisProgress(0);
       setAnalysisComplete(false);
       
+      const extractedRepoName = extractRepoNameFromUrl(cleanedUrl);
+      
       const result = await githubMutation.mutateAsync({
-        repositoryUrl: repoUrl,
-        repositoryName: repoName || extractRepoNameFromUrl(repoUrl),
+        repositoryUrl: cleanedUrl,
+        repositoryName: repoName || extractedRepoName,
       });
 
       // Show completion animation
