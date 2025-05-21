@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Markdown } from "@/components/ui/markdown";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { 
@@ -20,7 +21,9 @@ import {
   AlertCircle,
   FolderGit,
   ArrowRight,
-  ChevronRight
+  ChevronRight,
+  CheckCircle,
+  Database
 } from "lucide-react";
 import { 
   RepositoryAnalysisRequest, 
@@ -28,6 +31,7 @@ import {
   RepositoryAnalysisListItem
 } from "@/types";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50MB
 
@@ -257,6 +261,49 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
     const repoNameWithExtension = parts[parts.length - 1];
     return repoNameWithExtension.replace(/\.git$/, "");
   };
+
+  // Full-screen loading animation when analyzing a repository
+  if (isAnalyzing) {
+    return (
+      <div className="fixed inset-0 bg-black/70 dark:bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl text-center">
+          <div className="mb-6">
+            {analysisComplete ? (
+              <div className="w-16 h-16 mx-auto bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-8 w-8 text-green-500 dark:text-green-400" />
+              </div>
+            ) : (
+              <div className="w-16 h-16 mx-auto bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                <Database className="h-8 w-8 text-primary-500 dark:text-primary-400 animate-pulse" />
+              </div>
+            )}
+          </div>
+          
+          <h2 className="text-2xl font-medium mb-2">
+            {analysisComplete ? "Analysis Complete!" : "Analyzing Repository"}
+          </h2>
+          
+          <p className="text-gray-600 dark:text-gray-300 mb-8">
+            {analysisComplete 
+              ? "Successfully analyzed your repository. Loading results..." 
+              : "Our AI is processing your code to provide detailed insights..."
+            }
+          </p>
+          
+          <div className="mb-2">
+            <Progress value={analysisProgress} className="h-2" />
+          </div>
+          
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {analysisComplete 
+              ? "100% Complete" 
+              : `${Math.round(analysisProgress)}% Complete`
+            }
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Show analysis results if we have them
   if (selectedAnalysis) {
