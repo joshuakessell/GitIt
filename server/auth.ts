@@ -57,6 +57,9 @@ export const setupAuth = (app: Express): void => {
   const callbackURL = process.env.NODE_ENV === 'production'
     ? 'https://codexplainer.joshuakessell.com/api/auth/github/callback'
     : `https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000'}/api/auth/github/callback`;
+  
+  // Log the callback URL being used to aid in debugging
+  log(`GitHub OAuth callback URL: ${callbackURL}`, 'auth');
 
   // Only set up GitHub strategy if credentials are provided
   if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
