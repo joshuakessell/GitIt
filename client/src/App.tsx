@@ -11,36 +11,49 @@ import { CodeToTextConverter } from "@/components/CodeToTextConverter";
 import { TextToCodeConverter } from "@/components/TextToCodeConverter";
 import { GitHubRepoBrowser } from "@/components/GitHubRepoBrowser";
 import { HistorySection } from "@/components/HistorySection";
-import { LearningPathVisualization } from "@/components/LearningPathVisualization";
 import { Footer } from "@/components/Footer";
 import NotFound from "@/pages/not-found";
+import { useAuth } from "@/hooks/useAuth";
 
 type TabKey = "code-to-text" | "text-to-code" | "repo-browser";
 
-function App() {
+function AppContent() {
   const [activeTab, setActiveTab] = useState<TabKey>("code-to-text");
+  const { user, isAuthenticated, isLoading } = useAuth();
+  
+  // If user is not authenticated and tries to access repo browser, switch to code-to-text
+  if (!isLoading && !isAuthenticated && activeTab === "repo-browser") {
+    setActiveTab("code-to-text");
+  }
 
   return (
+    <ThemeProvider defaultTheme="system" storageKey="theme">
+      <TooltipProvider>
+        <HeaderNav />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <TabNavigation 
+            activeTab={activeTab} 
+            onTabChange={setActiveTab} 
+            showRepoBrowser={isAuthenticated} 
+          />
+          
+          {activeTab === "code-to-text" && <CodeToTextConverter />}
+          {activeTab === "text-to-code" && <TextToCodeConverter />}
+          {activeTab === "repo-browser" && isAuthenticated && <GitHubRepoBrowser />}
+          
+          <HistorySection />
+        </main>
+        <Footer />
+        <Toaster />
+      </TooltipProvider>
+    </ThemeProvider>
+  );
+}
+
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="theme">
-        <TooltipProvider>
-          <HeaderNav />
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            
-            {activeTab === "code-to-text" && <CodeToTextConverter />}
-            {activeTab === "text-to-code" && <TextToCodeConverter />}
-            {activeTab === "repo-browser" && <GitHubRepoBrowser />}
-            
-            <HistorySection />
-            
-            {/* Learning Path Visualization */}
-            <LearningPathVisualization />
-          </main>
-          <Footer />
-          <Toaster />
-        </TooltipProvider>
-      </ThemeProvider>
+      <AppContent />
     </QueryClientProvider>
   );
 }

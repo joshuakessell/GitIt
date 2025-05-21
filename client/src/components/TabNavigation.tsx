@@ -10,14 +10,20 @@ type TabKey = "code-to-text" | "text-to-code" | "repo-browser";
 interface TabNavigationProps {
   activeTab: TabKey;
   onTabChange: (tab: TabKey) => void;
+  showRepoBrowser?: boolean;
 }
 
-export function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
+export function TabNavigation({ activeTab, onTabChange, showRepoBrowser = false }: TabNavigationProps) {
+  // Filter tabs based on authentication status
   const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: "code-to-text", label: "Code to Text", icon: <Code className="h-4 w-4 mr-1" /> },
     { key: "text-to-code", label: "Text to Code", icon: <FileText className="h-4 w-4 mr-1" /> },
-    { key: "repo-browser", label: "GitHub Repo Browser", icon: <Github className="h-4 w-4 mr-1" /> },
   ];
+  
+  // Only add GitHub Repo Browser if user is authenticated
+  if (showRepoBrowser) {
+    tabs.push({ key: "repo-browser", label: "GitHub Repo Browser", icon: <Github className="h-4 w-4 mr-1" /> });
+  }
   
   return (
     <>
