@@ -6,6 +6,7 @@ import { openaiAPI } from "./openai-api";
 import { githubAPI } from "./github-api";
 import { extractFilesFromZip, cleanupTempFiles } from "./file-utils";
 import uploadMiddleware, { handleUploadErrors } from "./upload-middleware";
+import { ensureAuthenticated } from "./auth";
 import fs from "fs";
 import path from "path";
 import { promisify } from "util";
@@ -394,6 +395,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(response);
     } catch (error) {
       log(`Error in GET /api/analyses: ${error}`, "api");
+      return res.status(500).json({
+        message: "Failed to fetch analysis history",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // Get user's GitHub repositories
+  app.get("/api/github/repositories", ensureAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      if (!user.githubAccessToken) {
+        return res.status(400).json({ 
+          message: "GitHub access token not available. Please reconnect your GitHub account."
+        });
+      }
+      
+      githubAPI.setToken(user.githubAccessToken);
+      const repositories = await githubAPI.getRepositories();
+      
+      return res.json(repositories);
+    } catch (error) {
+      log(`Error in GET /api/github/repositories: ${error}`, "api");
       return res.status(500).json({
         message: "Failed to fetch analysis history",
         details: error instanceof Error ? error.message : "Unknown error"

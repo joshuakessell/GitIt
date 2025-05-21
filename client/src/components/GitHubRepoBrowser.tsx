@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Markdown } from "@/components/ui/markdown";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   Github, 
   Upload, 
@@ -16,25 +17,37 @@ import {
   ExternalLink, 
   BookOpen,
   FileCode,
-  AlertCircle
+  AlertCircle,
+  FolderGit,
+  ArrowRight,
+  ChevronRight
 } from "lucide-react";
 import { 
   RepositoryAnalysisRequest, 
   RepositoryAnalysisResponse,
   RepositoryAnalysisListItem
 } from "@/types";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 
 const MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50MB
 
 export function GitHubRepoBrowser() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>("upload");
+  const { user, isAuthenticated } = useAuth();
   const [repoUrl, setRepoUrl] = useState<string>("");
   const [repoName, setRepoName] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [activeResultTab, setActiveResultTab] = useState<string>("technical");
   const [recentAnalyses, setRecentAnalyses] = useState<RepositoryAnalysisListItem[]>([]);
   const [selectedAnalysis, setSelectedAnalysis] = useState<RepositoryAnalysisResponse | null>(null);
+  
+  // Fetch user's GitHub repositories
+  const { data: userRepos, isLoading: isLoadingRepos } = useQuery({
+    queryKey: ["/api/github/repositories"],
+    enabled: isAuthenticated,
+    retry: false
+  });
 
   // Mutation for GitHub repository analysis
   const githubMutation = useMutation({
@@ -326,49 +339,113 @@ export function GitHubRepoBrowser() {
               </div>
             </TabsContent>
             
-            <TabsContent value="github" className="mt-4 space-y-4">
-              <div>
-                <Label htmlFor="github-url" className="block text-sm font-medium mb-1">
-                  GitHub Repository URL
-                </Label>
-                <Input
-                  id="github-url"
-                  value={repoUrl}
-                  onChange={(e) => setRepoUrl(e.target.value)}
-                  placeholder="https://github.com/username/repository"
-                  className="w-full"
-                />
-              </div>
+            <TabsContent value="github" className="mt-4 space-y-6">
+              {isAuthenticated && (
+                <div>
+                  <h3 className="text-lg font-medium mb-3">Your GitHub Repositories</h3>
+                  
+                  {isLoadingRepos ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : userRepos && userRepos.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {userRepos.map((repo: any) => (
+                        <Card key={repo.id} className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-md font-medium flex items-center">
+                              <FolderGit className="h-4 w-4 mr-2 text-primary" />
+                              {repo.name}
+                            </CardTitle>
+                            <CardDescription className="text-xs line-clamp-1">
+                              {repo.description || "No description available"}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardFooter className="pt-2 flex justify-between">
+                            <a 
+                              href={repo.html_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center"
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              View on GitHub
+                            </a>
+                            <Button 
+                              size="sm" 
+                              variant="secondary"
+                              onClick={() => {
+                                setRepoUrl(repo.html_url);
+                                setRepoName(repo.name);
+                                handleGitHubAnalysis();
+                              }}
+                            >
+                              <ChevronRight className="h-3 w-3 mr-1" />
+                              Analyze
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : userRepos ? (
+                    <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-md text-center">
+                      <p>No GitHub repositories found for your account.</p>
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 p-4 rounded-md">
+                      <p className="text-yellow-800 dark:text-yellow-200">
+                        Could not fetch your GitHub repositories. Please try again later.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               
               <div>
-                <Label htmlFor="repository-name-github" className="block text-sm font-medium mb-1">
-                  Repository Name (Optional)
-                </Label>
-                <div className="flex items-center gap-2">
+                <h3 className="text-lg font-medium mb-3">Analyze Any Public Repository</h3>
+                <div>
+                  <Label htmlFor="github-url" className="block text-sm font-medium mb-1">
+                    GitHub Repository URL
+                  </Label>
                   <Input
-                    id="repository-name-github"
-                    value={repoName}
-                    onChange={(e) => setRepoName(e.target.value)}
-                    placeholder="Enter a custom name or leave blank to use the repository name"
-                    className="flex-1"
+                    id="github-url"
+                    value={repoUrl}
+                    onChange={(e) => setRepoUrl(e.target.value)}
+                    placeholder="https://github.com/username/repository"
+                    className="w-full bg-white dark:bg-gray-900"
                   />
-                  <Button 
-                    onClick={handleGitHubAnalysis} 
-                    disabled={githubMutation.isPending || !repoUrl}
-                    className="whitespace-nowrap"
-                  >
-                    {githubMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <Github className="mr-2 h-4 w-4" />
-                        Analyze Repository
-                      </>
-                    )}
-                  </Button>
+                </div>
+                
+                <div className="mt-4">
+                  <Label htmlFor="repository-name-github" className="block text-sm font-medium mb-1">
+                    Repository Name (Optional)
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="repository-name-github"
+                      value={repoName}
+                      onChange={(e) => setRepoName(e.target.value)}
+                      placeholder="Enter a custom name or leave blank to use the repository name"
+                      className="flex-1 bg-white dark:bg-gray-900"
+                    />
+                    <Button 
+                      onClick={handleGitHubAnalysis} 
+                      disabled={githubMutation.isPending || !repoUrl}
+                      className="whitespace-nowrap"
+                    >
+                      {githubMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <Github className="mr-2 h-4 w-4" />
+                          Analyze Repository
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
               
