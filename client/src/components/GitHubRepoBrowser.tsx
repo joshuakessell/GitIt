@@ -384,18 +384,18 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
         <div className="p-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="upload" className="flex items-center">
+              <TabsTrigger value="upload" className="flex items-center justify-center">
                 <FileArchive className="h-4 w-4 mr-2" />
-                Upload Zip File
+                Zip File
               </TabsTrigger>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div>
+                    <div className="w-full">
                       <TabsTrigger 
                         value="github" 
                         className={cn(
-                          "flex items-center",
+                          "flex items-center justify-center w-full",
                           !isAuthenticated && "opacity-70 cursor-not-allowed"
                         )}
                         disabled={!isAuthenticated}
@@ -404,7 +404,7 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
                         }}
                       >
                         <Github className="h-4 w-4 mr-2" />
-                        GitHub Repository
+                        GitHub
                       </TabsTrigger>
                     </div>
                   </TooltipTrigger>
