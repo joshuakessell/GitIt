@@ -11,6 +11,7 @@ import { CodeToTextConverter } from "@/components/CodeToTextConverter";
 import { TextToCodeConverter } from "@/components/TextToCodeConverter";
 import { GitHubRepoBrowser } from "@/components/GitHubRepoBrowser";
 import { HistorySection } from "@/components/HistorySection";
+import { LearningPathVisualization } from "@/components/LearningPathVisualization";
 import { Footer } from "@/components/Footer";
 import NotFound from "@/pages/not-found";
 
@@ -32,6 +33,9 @@ function App() {
             {activeTab === "repo-browser" && <GitHubRepoBrowser />}
             
             <HistorySection />
+            
+            {/* Learning Path Visualization */}
+            <LearningPathVisualization />
           </main>
           <Footer />
           <Toaster />
