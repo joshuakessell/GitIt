@@ -19,6 +19,52 @@ import { log } from "./vite";
 
 const readFile = promisify(fs.readFile);
 
+// Extract a title from code snippet
+function extractCodeTitle(code: string, language: string): string {
+  // Try to extract a title based on function or class names
+  const functionMatches: Record<string, RegExp> = {
+    // Match function declarations in different languages
+    javascript: /function\s+([a-zA-Z0-9_]+)\s*\(/,
+    typescript: /function\s+([a-zA-Z0-9_]+)\s*\(|([a-zA-Z0-9_]+)\s*\([^)]*\)\s*:|class\s+([a-zA-Z0-9_]+)/,
+    python: /def\s+([a-zA-Z0-9_]+)\s*\(|class\s+([a-zA-Z0-9_]+)/,
+    java: /public\s+(?:static\s+)?(?:class|void|[a-zA-Z0-9_<>]+)\s+([a-zA-Z0-9_]+)(?:\s*\(|\s*\{)/,
+    csharp: /public\s+(?:static\s+)?(?:class|void|[a-zA-Z0-9_<>]+)\s+([a-zA-Z0-9_]+)(?:\s*\(|\s*\{)/,
+    go: /func\s+([a-zA-Z0-9_]+)\s*\(|type\s+([a-zA-Z0-9_]+)\s+struct/,
+    ruby: /def\s+([a-zA-Z0-9_]+)|class\s+([a-zA-Z0-9_]+)/,
+    php: /function\s+([a-zA-Z0-9_]+)\s*\(|class\s+([a-zA-Z0-9_]+)/,
+    rust: /fn\s+([a-zA-Z0-9_]+)\s*\(|struct\s+([a-zA-Z0-9_]+)/,
+    swift: /func\s+([a-zA-Z0-9_]+)\s*\(|class\s+([a-zA-Z0-9_]+)/,
+  };
+
+  // Default to JavaScript regex if language not found or set to auto
+  const languageRegex = functionMatches[language.toLowerCase()] || functionMatches.javascript;
+  
+  // Extract name
+  const match = code.match(languageRegex);
+  if (match) {
+    // Return the first captured group that isn't undefined
+    for (let i = 1; i < match.length; i++) {
+      if (match[i]) {
+        return `${match[i]} ${language.toLowerCase() !== 'auto' ? `(${language})` : ''}`;
+      }
+    }
+  }
+  
+  // If no match found, try to get first non-empty line that's not a comment
+  const lines = code.split('\n');
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (trimmedLine && !trimmedLine.startsWith('//') && !trimmedLine.startsWith('#') && !trimmedLine.startsWith('/*')) {
+      // Return a truncated version of the first meaningful line
+      const shortened = trimmedLine.length > 30 ? trimmedLine.substring(0, 30) + '...' : trimmedLine;
+      return shortened;
+    }
+  }
+  
+  // Default title
+  return language !== 'auto' ? `Code snippet (${language})` : 'Code snippet';
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Code to text explanation route
   app.post("/api/explain", async (req, res) => {
@@ -327,6 +373,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       log(`Error in GET /api/analyses: ${error}`, "api");
       return res.status(500).json({
         message: "Failed to fetch analysis history",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // Get explanation history for the current user
+  app.get("/api/history", async (req, res) => {
+    try {
+      // Check if the user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const userId = (req.user as any).id;
+      const explanations = await storage.getExplanationsByUser(userId, 10);
+      
+      // Format the response
+      const response = explanations.map(explanation => ({
+        id: explanation.id,
+        title: explanation.title,
+        language: explanation.language,
+        type: explanation.type,
+        createdAt: explanation.createdAt,
+        // Don't include the full code and explanation to keep the response smaller
+        codePreview: explanation.code.substring(0, 100) + (explanation.code.length > 100 ? '...' : '')
+      }));
+      
+      return res.json(response);
+    } catch (error) {
+      log(`Error in GET /api/history: ${error}`, "api");
+      return res.status(500).json({
+        message: "Failed to fetch history",
         details: error instanceof Error ? error.message : "Unknown error"
       });
     }

@@ -1,57 +1,103 @@
 import { HistoryItem } from "@/types";
 import { formatDate } from "@/lib/utils";
-import { Code, FileText } from "lucide-react";
+import { Code, FileText, Loader } from "lucide-react";
 import { getLanguageLabel } from "@/lib/languages";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 
 interface HistorySectionProps {
   historyItems?: HistoryItem[];
 }
 
 export function HistorySection({ historyItems = [] }: HistorySectionProps) {
-  // If no history items provided, show placeholder items
-  const placeholderItems: HistoryItem[] = [
-    {
-      id: 1,
-      title: "Recursive Fibonacci function",
-      language: "javascript",
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-      type: "code-to-text",
-    },
-    {
-      id: 2,
-      title: "API authentication middleware",
-      language: "python",
-      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
-      type: "text-to-code",
-    },
-  ];
+  const { isAuthenticated } = useAuth();
+  
+  // Fetch history items from the API if user is authenticated
+  const { data: fetchedItems, isLoading } = useQuery({
+    queryKey: ['/api/history'],
+    enabled: isAuthenticated,
+    retry: false
+  });
+  
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium">Recent Activity</h2>
+        </div>
+        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md p-6 flex justify-center">
+          <div className="flex flex-col items-center text-gray-500 dark:text-gray-400">
+            <Loader className="h-8 w-8 animate-spin mb-2" />
+            <p>Loading your history...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const itemsToRender = historyItems.length > 0 ? historyItems : placeholderItems;
+  // If user provided items directly, use those
+  // Otherwise use fetched items if available
+  // Otherwise empty array (no placeholders)
+  const itemsToRender = historyItems.length > 0 
+    ? historyItems 
+    : (fetchedItems || []);
+
+  // When there are no items to show
+  if (itemsToRender.length === 0) {
+    return (
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium">Recent Activity</h2>
+        </div>
+        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md p-8">
+          <div className="flex flex-col items-center text-gray-500 dark:text-gray-400 text-center">
+            <FileText className="h-10 w-10 mb-3 opacity-40" />
+            <h3 className="text-lg font-medium mb-2">No history yet</h3>
+            <p className="max-w-md">
+              Your recent code explanations and generations will appear here after you use the app.
+              {!isAuthenticated && (
+                <span className="block mt-2 text-indigo-600 dark:text-indigo-400">
+                  Sign in to save your history across sessions.
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="mt-8">
+    <div className="mt-8 animate-fadeIn">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-medium">Recent Activity</h2>
-        <button className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300">
-          View all
-        </button>
+        {itemsToRender.length > 5 && (
+          <button className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors">
+            View all
+          </button>
+        )}
       </div>
-      <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
+      <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md transition-all duration-200">
         <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {itemsToRender.map((item) => (
-            <li key={item.id}>
+            <li key={item.id} className="transform hover:scale-[1.01] transition-transform">
               <a href="#" className="block hover:bg-gray-50 dark:hover:bg-gray-700">
                 <div className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <span className="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center bg-indigo-100 dark:bg-indigo-900">
+                      <span className={`flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center ${
+                        item.type === "code-to-text" 
+                          ? "bg-indigo-100 dark:bg-indigo-900" 
+                          : "bg-purple-100 dark:bg-purple-900"
+                      }`}>
                         {item.type === "code-to-text" ? (
                           <Code className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
                         ) : (
                           <FileText className="h-3 w-3 text-purple-600 dark:text-purple-400" />
                         )}
                       </span>
-                      <p className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                      <p className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs">
                         {item.title}
                       </p>
                     </div>

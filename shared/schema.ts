@@ -28,6 +28,7 @@ export const explanations = pgTable("explanations", {
   code: text("code").notNull(),
   explanation: text("explanation").notNull(),
   language: text("language").notNull(),
+  type: text("type").notNull().default("code-to-text"), // Add type field to distinguish between code-to-text and text-to-code
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -37,6 +38,7 @@ export const insertExplanationSchema = createInsertSchema(explanations).pick({
   code: true,
   explanation: true,
   language: true,
+  type: true,
 });
 
 // Repository analysis table
