@@ -1,10 +1,13 @@
 import { 
   users, 
   repositoryAnalyses,
+  explanations,
   type User, 
   type InsertUser,
   type RepositoryAnalysis,
   type InsertRepositoryAnalysis,
+  type Explanation,
+  type InsertExplanation,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -20,6 +23,11 @@ export interface IStorage {
   getRepositoryAnalysis(id: number): Promise<RepositoryAnalysis | undefined>;
   getRepositoryAnalysesByUser(userId: number): Promise<RepositoryAnalysis[]>;
   getLatestRepositoryAnalyses(limit?: number): Promise<RepositoryAnalysis[]>;
+  
+  // Explanation history operations
+  saveExplanation(explanation: InsertExplanation): Promise<Explanation>;
+  getExplanationsByUser(userId: number, limit?: number): Promise<Explanation[]>;
+  getLatestExplanations(limit?: number): Promise<Explanation[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -45,6 +53,32 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+  
+  // Explanation history operations
+  async saveExplanation(explanation: InsertExplanation): Promise<Explanation> {
+    const [saved] = await db
+      .insert(explanations)
+      .values(explanation)
+      .returning();
+    return saved;
+  }
+  
+  async getExplanationsByUser(userId: number, limit: number = 10): Promise<Explanation[]> {
+    return await db
+      .select()
+      .from(explanations)
+      .where(eq(explanations.userId, userId))
+      .orderBy(desc(explanations.createdAt))
+      .limit(limit);
+  }
+  
+  async getLatestExplanations(limit: number = 10): Promise<Explanation[]> {
+    return await db
+      .select()
+      .from(explanations)
+      .orderBy(desc(explanations.createdAt))
+      .limit(limit);
   }
   
   // Repository analysis operations
@@ -84,14 +118,18 @@ export class DatabaseStorage implements IStorage {
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private repositoryAnalyses: Map<number, RepositoryAnalysis>;
+  private explanationHistory: Map<number, Explanation>;
   private userIdCounter: number;
   private repoAnalysisIdCounter: number;
+  private explanationIdCounter: number;
 
   constructor() {
     this.users = new Map();
     this.repositoryAnalyses = new Map();
+    this.explanationHistory = new Map();
     this.userIdCounter = 1;
     this.repoAnalysisIdCounter = 1;
+    this.explanationIdCounter = 1;
   }
 
   // User operations
@@ -143,6 +181,39 @@ export class MemStorage implements IStorage {
   
   async getLatestRepositoryAnalyses(limit: number = 10): Promise<RepositoryAnalysis[]> {
     return Array.from(this.repositoryAnalyses.values())
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+  }
+  
+  // Explanation history operations
+  async saveExplanation(explanation: InsertExplanation): Promise<Explanation> {
+    const id = this.explanationIdCounter++;
+    const now = new Date();
+    
+    const savedExplanation: Explanation = {
+      id,
+      userId: explanation.userId || null,
+      title: explanation.title || "Code explanation",
+      code: explanation.code,
+      explanation: explanation.explanation,
+      language: explanation.language,
+      type: explanation.type,
+      createdAt: now
+    };
+    
+    this.explanationHistory.set(id, savedExplanation);
+    return savedExplanation;
+  }
+  
+  async getExplanationsByUser(userId: number, limit: number = 10): Promise<Explanation[]> {
+    return Array.from(this.explanationHistory.values())
+      .filter(explanation => explanation.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+  }
+  
+  async getLatestExplanations(limit: number = 10): Promise<Explanation[]> {
+    return Array.from(this.explanationHistory.values())
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, limit);
   }

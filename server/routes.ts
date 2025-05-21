@@ -43,8 +43,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mergedSettings.detailLevel
       );
       
+      // Get a title for the explanation based on the code
+      const title = extractCodeTitle(code, language) || "Code explanation";
+      
       // Save the explanation to history if user is logged in
-      // This is not implemented as user auth is not part of the core requirements
+      if (req.isAuthenticated()) {
+        try {
+          const userId = (req.user as any).id;
+          await storage.saveExplanation({
+            userId,
+            title,
+            code,
+            explanation,
+            language,
+            type: "code-to-text"
+          });
+        } catch (saveError) {
+          log(`Error saving explanation to history: ${saveError}`, "api");
+          // Continue even if saving fails
+        }
+      }
       
       return res.json({ explanation });
     } catch (error) {
