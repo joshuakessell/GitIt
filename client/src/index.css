@@ -2,6 +2,112 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom animations for improved UI */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInFromRight {
+  from { 
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to { 
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromLeft {
+  from { 
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to { 
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromBottom {
+  from { 
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to { 
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Custom animation utility classes */
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slideInRight {
+  animation: slideInFromRight 0.4s ease-out;
+}
+
+.animate-slideInLeft {
+  animation: slideInFromLeft 0.4s ease-out;
+}
+
+.animate-slideInBottom {
+  animation: slideInFromBottom 0.4s ease-out;
+}
+
+/* Staggered animation delays */
+.animation-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+
+/* Improved spacing consistency */
+.section-container {
+  @apply px-4 py-6 md:px-6 md:py-8;
+}
+
+.form-section {
+  @apply space-y-6;
+}
+
+/* Dashboard layout classes */
+.dashboard-container {
+  @apply grid gap-6 md:grid-cols-12;
+}
+
+.dashboard-main {
+  @apply md:col-span-8 space-y-6;
+}
+
+.dashboard-sidebar {
+  @apply md:col-span-4 space-y-6;
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 768px) {
+  .mobile-stack {
+    @apply flex flex-col space-y-4;
+  }
+  
+  .mobile-compact {
+    @apply px-3 py-2 text-sm;
+  }
+  
+  .mobile-hidden {
+    @apply hidden;
+  }
+}
+
 :root {
   --background: 0 0% 100%;
   --foreground: 20 14.3% 4.1%;

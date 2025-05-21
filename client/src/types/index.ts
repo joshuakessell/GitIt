@@ -32,6 +32,7 @@ export interface HistoryItem {
   language: string;
   createdAt: string;
   type: "code-to-text" | "text-to-code";
+  codePreview?: string;
 }
 
 export interface LanguageOption {

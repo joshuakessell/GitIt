@@ -137,6 +137,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use OpenAI API for code generation instead of Hugging Face
       const code = await openaiAPI.generateCode(description, language);
       
+      // Create a title based on the description
+      const title = description.length > 40 
+        ? description.substring(0, 40) + "..." 
+        : description;
+      
+      // Save the code generation to history if user is logged in
+      if (req.isAuthenticated()) {
+        try {
+          const userId = (req.user as any).id;
+          await storage.saveExplanation({
+            userId,
+            title,
+            code,
+            explanation: description,
+            language,
+            type: "text-to-code"
+          });
+        } catch (saveError) {
+          log(`Error saving code generation to history: ${saveError}`, "api");
+          // Continue even if saving fails
+        }
+      }
+      
       return res.json({ code });
     } catch (error) {
       log(`Error in /api/generate: ${error}`, "api");

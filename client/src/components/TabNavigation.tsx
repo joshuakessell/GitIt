@@ -37,21 +37,29 @@ export function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
       </div>
       
       {/* Desktop tabs */}
-      <div className="hidden sm:block mb-6">
-        <nav className="flex space-x-4">
-          {tabs.map((tab) => (
+      <div className="hidden sm:block mb-6 animate-fadeIn">
+        <nav className="flex space-x-4 p-1">
+          {tabs.map((tab, index) => (
             <button
               key={tab.key}
               onClick={() => onTabChange(tab.key)}
               className={cn(
-                "px-3 py-2 rounded-md text-sm font-medium flex items-center",
+                "px-4 py-2 rounded-md text-sm font-medium flex items-center transition-all duration-200 relative group",
                 activeTab === tab.key
-                  ? "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  ? "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               )}
+              style={{
+                animationDelay: `${index * 100}ms`
+              }}
             >
-              {tab.icon}
-              {tab.label}
+              <span className="mr-2 transition-transform duration-200 transform group-hover:scale-110">
+                {tab.icon}
+              </span>
+              <span>{tab.label}</span>
+              {activeTab === tab.key && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500 dark:bg-primary-400 rounded-full animate-fadeIn" />
+              )}
             </button>
           ))}
         </nav>

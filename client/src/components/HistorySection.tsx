@@ -13,7 +13,7 @@ export function HistorySection({ historyItems = [] }: HistorySectionProps) {
   const { isAuthenticated } = useAuth();
   
   // Fetch history items from the API if user is authenticated
-  const { data: fetchedItems, isLoading } = useQuery({
+  const { data: fetchedItems, isLoading } = useQuery<HistoryItem[]>({
     queryKey: ['/api/history'],
     enabled: isAuthenticated,
     retry: false
