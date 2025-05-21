@@ -4,8 +4,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { Markdown } from "@/components/ui/markdown";
-import { AdvancedOptions } from "@/components/AdvancedOptions";
-import { Loader2, Copy, Download, FileText, Trash, AlertCircle, CheckCircle } from "lucide-react";
+import { Loader2, Copy, Download, FileText, Trash, AlertCircle, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -69,6 +70,7 @@ export function CodeToTextConverter() {
   const { toast } = useToast();
   const [code, setCode] = useState("");
   const [language, setLanguage] = useState("auto");
+  const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<ExplanationSettings>({
     detailLevel: "standard",
     includeComments: true,
@@ -271,10 +273,111 @@ export function CodeToTextConverter() {
               aria-label="Code editor"
             />
             
-            {/* Advanced Options Inside Code Input Box */}
-            <div className="mb-4 bg-gray-50 p-3 rounded-md dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
-              <h3 className="text-sm font-medium mb-2">Advanced Settings</h3>
-              <AdvancedOptions settings={settings} onSettingsChange={setSettings} />
+            {/* Advanced Settings (Expandable) */}
+            <div className="mb-4">
+              <button 
+                onClick={() => setAdvancedSettingsOpen(!advancedSettingsOpen)}
+                className="w-full flex justify-between items-center py-2 px-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span className="text-sm font-medium">Advanced Settings</span>
+                {advancedSettingsOpen ? 
+                  <ChevronUp className="h-4 w-4" /> : 
+                  <ChevronDown className="h-4 w-4" />
+                }
+              </button>
+              
+              {advancedSettingsOpen && (
+                <div className="mt-3 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md animate-fadeIn">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="block text-sm font-medium mb-2">Explanation Detail Level</Label>
+                      <Select
+                        value={settings.detailLevel}
+                        onValueChange={(value) => 
+                          setSettings({...settings, detailLevel: value as "basic" | "standard" | "advanced"})
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Detail level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="basic">Basic (Beginner friendly)</SelectItem>
+                          <SelectItem value="standard">Standard</SelectItem>
+                          <SelectItem value="advanced">Advanced (Technical details)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="block text-sm font-medium mb-2">Include Code Comments</Label>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="include-comments"
+                            checked={settings.includeComments}
+                            onCheckedChange={(checked) => 
+                              setSettings({...settings, includeComments: checked as boolean})
+                            }
+                          />
+                          <Label htmlFor="include-comments">Include comments</Label>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="block text-sm font-medium mb-2">Output Format</Label>
+                      <Select
+                        value={settings.outputFormat}
+                        onValueChange={(value) => 
+                          setSettings({...settings, outputFormat: value as "plain" | "markdown" | "html"})
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Output format" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="plain">Plain text</SelectItem>
+                          <SelectItem value="markdown">Markdown</SelectItem>
+                          <SelectItem value="html">HTML</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="block text-sm font-medium mb-2">Additional Information</Label>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="include-complexity"
+                            checked={settings.includeComplexity}
+                            onCheckedChange={(checked) => 
+                              setSettings({...settings, includeComplexity: checked as boolean})
+                            }
+                          />
+                          <Label htmlFor="include-complexity">Time/Space complexity</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="include-edge-cases"
+                            checked={settings.includeEdgeCases}
+                            onCheckedChange={(checked) => 
+                              setSettings({...settings, includeEdgeCases: checked as boolean})
+                            }
+                          />
+                          <Label htmlFor="include-edge-cases">Edge cases handling</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="include-improvements"
+                            checked={settings.includeImprovements}
+                            onCheckedChange={(checked) => 
+                              setSettings({...settings, includeImprovements: checked as boolean})
+                            }
+                          />
+                          <Label htmlFor="include-improvements">Potential improvements</Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="mt-4 flex justify-between">
