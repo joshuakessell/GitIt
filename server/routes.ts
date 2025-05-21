@@ -324,6 +324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const parseResult = repositoryAnalysisRequestSchema.safeParse(req.body);
       
       if (!parseResult.success) {
+        logger.warn('Invalid repository analysis request data', 'api:analyze:github', parseResult.error.format());
         return res.status(400).json({ 
           message: "Invalid request data",
           errors: parseResult.error.format() 
@@ -333,22 +334,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { repositoryUrl, repositoryName } = parseResult.data;
       
       if (!repositoryUrl) {
+        logger.warn('Repository URL missing in request', 'api:analyze:github');
         return res.status(400).json({ 
           message: "Repository URL is required" 
         });
+      }
+      
+      // Normalize the repository URL to ensure consistent caching
+      const normalizedRepoUrl = repositoryUrl.trim().replace(/\/+$/, '').replace(/\.git$/, '');
+      
+      // Generate a cache key based on the repository URL
+      const cacheKey = `analysis:github:${Buffer.from(normalizedRepoUrl).toString('base64')}`;
+      
+      // Check if we have a cached analysis for this repository
+      const cachedAnalysis = cache.get(cacheKey);
+      if (cachedAnalysis) {
+        logger.info(`Returning cached analysis for ${normalizedRepoUrl}`, 'api:analyze:github');
+        return res.json(cachedAnalysis);
       }
       
       // Set GitHub token if available
       if (req.headers.authorization) {
         const token = req.headers.authorization.replace('Bearer ', '');
         githubAPI.setToken(token);
+      } else if (req.isAuthenticated() && (req.user as any).githubAccessToken) {
+        githubAPI.setToken((req.user as any).githubAccessToken);
       }
       
+      logger.info(`Fetching repository files from ${normalizedRepoUrl}`, 'api:analyze:github');
       // Fetch files from the GitHub repository
-      const files = await githubAPI.fetchRepositoryFilesFromUrl(repositoryUrl);
+      const files = await githubAPI.fetchRepositoryFilesFromUrl(normalizedRepoUrl);
       
       // Check if we have any files to analyze
       if (Object.keys(files).length === 0) {
+        logger.warn(`No analyzable files found for ${normalizedRepoUrl}`, 'api:analyze:github');
         return res.status(400).json({
           message: "No analyzable files found",
           details: "The repository did not contain any code files that could be analyzed"
@@ -356,24 +375,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Analyze the repository using OpenAI
-      const actualRepoName = repositoryName || repositoryUrl.split('/').pop() || 'Repository';
-      const analysis = await openaiAPI.analyzeRepository(files, actualRepoName);
+      const actualRepoName = repositoryName || normalizedRepoUrl.split('/').pop() || 'Repository';
       
-      // Store the analysis in the database
+      logger.info(`Starting OpenAI analysis for repository: ${actualRepoName}`, 'api:analyze:github');
+      const startTime = Date.now();
+      const analysis = await openaiAPI.analyzeRepository(files, actualRepoName);
+      const duration = Date.now() - startTime;
+      logger.info(`Completed OpenAI analysis in ${duration}ms`, 'api:analyze:github');
+      
+      // Store analysis in database with user association if authenticated
+      const userId = req.isAuthenticated() ? (req.user as any).id : null;
+      
       const savedAnalysis = await storage.saveRepositoryAnalysis({
         repositoryName: actualRepoName,
-        repositoryUrl,
+        repositoryUrl: normalizedRepoUrl,
         technicalAnalysis: analysis.technicalAnalysis,
         userManual: analysis.userManual,
         analysisSummary: analysis.analysisSummary,
         analyzedFiles: analysis.analyzedFiles,
         totalFiles: analysis.totalFiles,
         metadata: null,
-        userId: null // Will be set when authentication is implemented
+        userId
       });
       
-      // Return the analysis results
-      return res.json({
+      // Prepare the response data
+      const responseData = {
         id: savedAnalysis.id,
         repositoryName: savedAnalysis.repositoryName,
         repositoryUrl: savedAnalysis.repositoryUrl,
@@ -382,12 +408,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         analyzedFiles: savedAnalysis.analyzedFiles,
         totalFiles: savedAnalysis.totalFiles,
         analysisSummary: savedAnalysis.analysisSummary
-      });
+      };
+      
+      // Cache the analysis result (1 hour TTL - since this is a very expensive operation)
+      cache.set(cacheKey, responseData, 3600);
+      
+      // Return the analysis results
+      return res.json(responseData);
     } catch (error) {
-      log(`Error in /api/analyze/github: ${error}`, "api");
+      logger.error('Failed to analyze GitHub repository', error as Error, 'api:analyze:github', {
+        url: req.body?.repositoryUrl
+      });
+      
+      // More specific error handling
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      if (errorMessage.includes('rate limit') || errorMessage.includes('403')) {
+        return res.status(429).json({
+          message: "GitHub API rate limit exceeded. Please try again later.",
+          details: errorMessage
+        });
+      }
+      
       return res.status(500).json({
         message: "Failed to analyze GitHub repository",
-        details: error instanceof Error ? error.message : "Unknown error"
+        details: errorMessage
       });
     }
   });
@@ -395,8 +439,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get analysis history
   app.get("/api/analyses", async (req, res) => {
     try {
-      // In a real app, we would filter by the logged-in user
-      const analyses = await storage.getLatestRepositoryAnalyses(10);
+      const userId = req.isAuthenticated() ? (req.user as any).id : null;
+      const cacheKey = userId ? `analyses:user:${userId}` : 'analyses:latest';
+      
+      // Try to get analyses from cache first (TTL: 5 minutes)
+      const cachedAnalyses = cache.get(cacheKey);
+      if (cachedAnalyses) {
+        logger.debug(`Cache hit for analyses list: ${cacheKey}`, 'api:analyses');
+        return res.json(cachedAnalyses);
+      }
+      
+      logger.debug(`Cache miss for analyses list, fetching from database`, 'api:analyses');
+      
+      // Fetch analyses based on authentication status
+      let analyses;
+      if (userId) {
+        analyses = await storage.getRepositoryAnalysesByUser(userId);
+      } else {
+        analyses = await storage.getLatestRepositoryAnalyses(10);
+      }
       
       // Map to simplified response format
       const response = analyses.map(analysis => ({
@@ -408,9 +469,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalFiles: analysis.totalFiles,
       }));
       
+      // Cache the result (5 minutes TTL)
+      cache.set(cacheKey, response, 300);
+      
       return res.json(response);
     } catch (error) {
-      log(`Error in GET /api/analyses: ${error}`, "api");
+      logger.error('Failed to fetch analysis history', error as Error, 'api:analyses');
       return res.status(500).json({
         message: "Failed to fetch analysis history",
         details: error instanceof Error ? error.message : "Unknown error"
@@ -422,21 +486,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/github/repositories", ensureAuthenticated, async (req: any, res) => {
     try {
       const user = req.user;
+      const userId = user.id;
+      
       if (!user.githubAccessToken) {
+        logger.warn(`GitHub access token not available for user: ${userId}`, 'api:github');
         return res.status(400).json({ 
           message: "GitHub access token not available. Please reconnect your GitHub account."
         });
       }
       
+      // Cache key for this user's repositories
+      const cacheKey = `github:repos:user:${userId}`;
+      
+      // Try to get from cache first (TTL: 10 minutes)
+      // Using shorter TTL since GitHub repos can be updated more frequently
+      const cachedRepos = cache.get(cacheKey);
+      if (cachedRepos) {
+        logger.debug(`Cache hit for GitHub repositories: user ${userId}`, 'api:github');
+        return res.json(cachedRepos);
+      }
+      
+      logger.info(`Fetching GitHub repositories for user: ${userId}`, 'api:github');
       githubAPI.setToken(user.githubAccessToken);
       const repositories = await githubAPI.getRepositories();
       
+      // Cache the repositories (10 minute TTL)
+      cache.set(cacheKey, repositories, 600);
+      
       return res.json(repositories);
     } catch (error) {
-      log(`Error in GET /api/github/repositories: ${error}`, "api");
+      logger.error('Failed to fetch GitHub repositories', error as Error, 'api:github');
+      
+      // Handle GitHub API rate limiting specifically
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      if (errorMessage.includes('rate limit') || errorMessage.includes('403')) {
+        return res.status(429).json({
+          message: "GitHub API rate limit exceeded. Please try again later.",
+          details: errorMessage
+        });
+      }
+      
       return res.status(500).json({
-        message: "Failed to fetch analysis history",
-        details: error instanceof Error ? error.message : "Unknown error"
+        message: "Failed to fetch GitHub repositories",
+        details: errorMessage
       });
     }
   });
@@ -450,22 +542,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const userId = (req.user as any).id;
+      
+      // Cache key for this user's history
+      const cacheKey = `explanations:user:${userId}`;
+      
+      // Try to get from cache first (TTL: 5 minutes)
+      const cachedHistory = cache.get(cacheKey);
+      if (cachedHistory) {
+        logger.debug(`Cache hit for user history: ${userId}`, 'api:history');
+        return res.json(cachedHistory);
+      }
+      
+      logger.debug(`Fetching explanation history for user: ${userId}`, 'api:history');
       const explanations = await storage.getExplanationsByUser(userId, 10);
+      
+      // Check if 'type' field exists in the schema
+      // This is a fix for the error in the logs
+      const hasTypeField = explanations.length > 0 && 'type' in explanations[0];
       
       // Format the response
       const response = explanations.map(explanation => ({
         id: explanation.id,
         title: explanation.title,
         language: explanation.language,
-        type: explanation.type,
+        // Only include type if the field exists
+        ...(hasTypeField && { type: (explanation as any).type }),
         createdAt: explanation.createdAt,
         // Don't include the full code and explanation to keep the response smaller
         codePreview: explanation.code.substring(0, 100) + (explanation.code.length > 100 ? '...' : '')
       }));
       
+      // Cache the history (5 minute TTL)
+      cache.set(cacheKey, response, 300);
+      
       return res.json(response);
     } catch (error) {
-      log(`Error in GET /api/history: ${error}`, "api");
+      logger.error('Failed to fetch explanation history', error as Error, 'api:history');
       return res.status(500).json({
         message: "Failed to fetch history",
         details: error instanceof Error ? error.message : "Unknown error"
