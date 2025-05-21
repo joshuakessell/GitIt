@@ -1,4 +1,5 @@
 import passport from 'passport';
+// @ts-ignore
 import { Strategy as GitHubStrategy } from 'passport-github2';
 import session from 'express-session';
 import ConnectPgSimple from 'connect-pg-simple';
@@ -57,13 +58,16 @@ export const setupAuth = (app: Express) => {
     ? 'https://your-production-domain.com/api/auth/github/callback'
     : 'https://54b5bc4a-1e97-4368-b6d9-25142d7f6322-00-35z4z3ollquhc.janeway.replit.dev/api/auth/github/callback';
 
-  passport.use(
-    new GitHubStrategy(
-      {
-        clientID: process.env.GITHUB_CLIENT_ID || '',
-        clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
-        callbackURL: callbackURL,
-      },
+  // Only set up GitHub strategy if credentials are provided
+  if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+    passport.use(
+      new GitHubStrategy(
+        {
+          clientID: process.env.GITHUB_CLIENT_ID,
+          clientSecret: process.env.GITHUB_CLIENT_SECRET,
+          callbackURL: callbackURL,
+        },
+      // @ts-ignore - Ignoring type issues with GitHub strategy
       async (accessToken, refreshToken, profile, done) => {
         try {
           // Check if user exists
@@ -102,7 +106,10 @@ export const setupAuth = (app: Express) => {
           return done(error as Error, undefined);
         }
       }
-    )
+    ))
+  } else {
+    log('GitHub authentication disabled - missing client ID or client secret', 'auth');
+  }
   );
 
   // Auth routes
