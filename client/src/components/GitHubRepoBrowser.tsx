@@ -481,7 +481,7 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
               </div>
             </TabsContent>
             
-            <TabsContent value="github" className="mt-4 space-y-6">
+            <TabsContent value="github" className="mt-4 space-y-4">
               {isAuthenticated && (
                 <div>
                   <h3 className="text-lg font-medium mb-3">Your GitHub Repositories</h3>

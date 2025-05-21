@@ -69,7 +69,8 @@ function validateCodeSyntax(code: string, language: string): { valid: boolean; m
 export function CodeToTextConverter() {
   const { toast } = useToast();
   const [code, setCode] = useState("");
-  const [language, setLanguage] = useState("auto");
+  // Always use automatic language detection
+  const language = "auto";
   const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<ExplanationSettings>({
     detailLevel: "standard",
@@ -178,7 +179,8 @@ export function CodeToTextConverter() {
 
   const handlePasteSample = async () => {
     try {
-      const sampleCode = await fetchSampleCode(language === 'auto' ? 'javascript' : language);
+      // For sample code, default to JavaScript since language is always "auto"
+      const sampleCode = await fetchSampleCode('javascript');
       if (sampleCode) {
         setCode(sampleCode);
       }
@@ -229,18 +231,7 @@ export function CodeToTextConverter() {
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <h2 className="text-lg font-medium">Code Input</h2>
             <div className="flex space-x-2">
-              <Select value={language} onValueChange={setLanguage} aria-label="Programming language selector">
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  {languages.map((lang) => (
-                    <SelectItem key={lang.value} value={lang.value}>
-                      {lang.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Language is automatically detected */}
               <Button
                 variant="ghost"
                 size="icon"
