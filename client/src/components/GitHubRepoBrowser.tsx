@@ -484,19 +484,19 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
             <TabsContent value="github" className="mt-4 space-y-4">
               {isAuthenticated && (
                 <div>
-                  <h3 className="text-lg font-medium mb-3">Your GitHub Repositories</h3>
+                  <h3 className="text-base font-medium mb-2">Your GitHub Repositories</h3>
                   
                   {isLoadingRepos ? (
                     <div className="flex justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
                     </div>
                   ) : userRepos && userRepos.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                       {userRepos.map((repo: any) => (
-                        <Card key={repo.id} className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+                        <Card key={repo.id} className="bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
                           <CardHeader className="pb-2">
                             <CardTitle className="text-md font-medium flex items-center">
-                              <FolderGit className="h-4 w-4 mr-2 text-primary" />
+                              <FolderGit className="h-4 w-4 mr-2 text-primary-500" />
                               {repo.name}
                             </CardTitle>
                             <CardDescription className="text-xs line-clamp-1">
@@ -508,7 +508,7 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
                               href={repo.html_url} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center"
+                              className="text-xs text-primary-500 hover:text-primary-600 dark:text-primary-400 hover:underline flex items-center"
                             >
                               <ExternalLink className="h-3 w-3 mr-1" />
                               View on GitHub
@@ -522,7 +522,6 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
                                 handleGitHubAnalysis();
                               }}
                             >
-                              <ChevronRight className="h-3 w-3 mr-1" />
                               Analyze
                             </Button>
                           </CardFooter>
@@ -530,11 +529,11 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
                       ))}
                     </div>
                   ) : userRepos ? (
-                    <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-md text-center">
+                    <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-4 rounded-md text-center mb-4">
                       <p>No GitHub repositories found for your account.</p>
                     </div>
                   ) : (
-                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 p-4 rounded-md">
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 p-4 rounded-md mb-4">
                       <p className="text-yellow-800 dark:text-yellow-200">
                         Could not fetch your GitHub repositories. Please try again later.
                       </p>
@@ -544,7 +543,7 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
               )}
               
               <div>
-                <h3 className="text-lg font-medium mb-3">Analyze Any Public Repository</h3>
+                <h3 className="text-base font-medium mb-2">Analyze Any Public Repository</h3>
                 <div>
                   <Label htmlFor="github-url" className="block text-sm font-medium mb-1">
                     GitHub Repository URL

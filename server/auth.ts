@@ -53,10 +53,10 @@ export const setupAuth = (app: Express): void => {
   });
 
   // Set up GitHub authentication strategy
-  // For GitHub OAuth, we need a static callback URL
+  // For GitHub OAuth, we need the correct callback URL for the domain
   const callbackURL = process.env.NODE_ENV === 'production'
-    ? 'https://your-production-domain.com/api/auth/github/callback'
-    : 'https://54b5bc4a-1e97-4368-b6d9-25142d7f6322-00-35z4z3ollquhc.janeway.replit.dev/api/auth/github/callback';
+    ? 'https://codexplainer.joshuakessell.com/api/auth/github/callback'
+    : `https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000'}/api/auth/github/callback`;
 
   // Only set up GitHub strategy if credentials are provided
   if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
