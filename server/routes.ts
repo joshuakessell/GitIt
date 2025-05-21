@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { huggingFaceAPI } from "./huggingface-api";
@@ -17,6 +17,8 @@ import {
   explanationSettingsSchema
 } from "@shared/schema";
 import { log } from "./vite";
+import { cache } from "./cache";
+import { logger } from "./logger";
 
 const readFile = promisify(fs.readFile);
 
@@ -175,6 +177,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/samples/:language", (req, res) => {
     const { language } = req.params;
     
+    // Cache key for this endpoint
+    const cacheKey = `samples:${language.toLowerCase()}`;
+    
+    // Check cache first
+    const cachedSample = cache.get<string>(cacheKey);
+    if (cachedSample) {
+      logger.debug(`Cache hit for sample code: ${language}`, 'api:samples');
+      return res.json({ sample: cachedSample });
+    }
+    
     // Very simple samples implementation
     const samples: Record<string, string> = {
       javascript: `function fibonacci(num) {
@@ -222,8 +234,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const sample = samples[language.toLowerCase()] || "";
     
     if (!sample) {
+      logger.info(`No sample available for language: ${language}`, 'api:samples');
       return res.status(404).json({ message: `No sample available for ${language}` });
     }
+    
+    // Cache the sample for future requests (24 hours, since samples don't change)
+    cache.set(cacheKey, sample, 86400);
     
     return res.json({ sample });
   });
