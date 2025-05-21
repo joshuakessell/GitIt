@@ -34,12 +34,12 @@ function AppContent() {
           <TabNavigation 
             activeTab={activeTab} 
             onTabChange={setActiveTab} 
-            showRepoBrowser={isAuthenticated} 
+            isAuthenticated={isAuthenticated} 
           />
           
           {activeTab === "code-to-text" && <CodeToTextConverter />}
           {activeTab === "text-to-code" && <TextToCodeConverter />}
-          {activeTab === "repo-browser" && isAuthenticated && <GitHubRepoBrowser />}
+          {activeTab === "repo-browser" && <GitHubRepoBrowser isAuthenticated={isAuthenticated} />}
           
           <HistorySection />
         </main>

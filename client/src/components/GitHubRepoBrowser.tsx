@@ -31,16 +31,23 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 
 const MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50MB
 
-export function GitHubRepoBrowser() {
+interface GitHubRepoBrowserProps {
+  isAuthenticated?: boolean;
+}
+
+export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowserProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>("upload");
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const [repoUrl, setRepoUrl] = useState<string>("");
   const [repoName, setRepoName] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [activeResultTab, setActiveResultTab] = useState<string>("technical");
   const [recentAnalyses, setRecentAnalyses] = useState<RepositoryAnalysisListItem[]>([]);
   const [selectedAnalysis, setSelectedAnalysis] = useState<RepositoryAnalysisResponse | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [analysisProgress, setAnalysisProgress] = useState<number>(0);
+  const [analysisComplete, setAnalysisComplete] = useState<boolean>(false);
   
   // Fetch user's GitHub repositories
   const { data: userRepos, isLoading: isLoadingRepos } = useQuery({
@@ -48,6 +55,27 @@ export function GitHubRepoBrowser() {
     enabled: isAuthenticated,
     retry: false
   });
+  
+  // Simulated progress function for analysis animation
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isAnalyzing && !analysisComplete) {
+      // Start at 0 and progress to 95% during analysis
+      interval = setInterval(() => {
+        setAnalysisProgress(prev => {
+          // Increase progressively slower as we approach 95%
+          const increment = Math.max(0.5, (100 - prev) * 0.05);
+          const newProgress = Math.min(95, prev + increment);
+          return newProgress;
+        });
+      }, 300);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isAnalyzing, analysisComplete]);
 
   // Mutation for GitHub repository analysis
   const githubMutation = useMutation({
@@ -101,14 +129,33 @@ export function GitHubRepoBrowser() {
     }
 
     try {
+      // Start analysis animation
+      setIsAnalyzing(true);
+      setAnalysisProgress(0);
+      setAnalysisComplete(false);
+      
       const result = await githubMutation.mutateAsync({
         repositoryUrl: repoUrl,
         repositoryName: repoName || extractRepoNameFromUrl(repoUrl),
       });
 
-      setSelectedAnalysis(result);
-      setActiveResultTab("technical");
+      // Show completion animation
+      setAnalysisProgress(100);
+      setAnalysisComplete(true);
+      
+      // Delay showing the result to allow for completion animation
+      setTimeout(() => {
+        setIsAnalyzing(false);
+        setAnalysisComplete(false);
+        setSelectedAnalysis(result);
+        setActiveResultTab("technical");
+      }, 1500);
+      
     } catch (error) {
+      // Reset analysis state
+      setIsAnalyzing(false);
+      setAnalysisComplete(false);
+      
       toast({
         title: "Analysis failed",
         description: error instanceof Error ? error.message : "Failed to analyze repository",
@@ -170,14 +217,32 @@ export function GitHubRepoBrowser() {
     }
 
     try {
+      // Start analysis animation
+      setIsAnalyzing(true);
+      setAnalysisProgress(0);
+      setAnalysisComplete(false);
+      
       const result = await uploadMutation.mutateAsync({
         file: selectedFile,
         repositoryName: repoName,
       });
 
-      setSelectedAnalysis(result);
-      setActiveResultTab("technical");
+      // Show completion animation
+      setAnalysisProgress(100);
+      setAnalysisComplete(true);
+      
+      // Delay showing the result to allow for completion animation
+      setTimeout(() => {
+        setIsAnalyzing(false);
+        setAnalysisComplete(false);
+        setSelectedAnalysis(result);
+        setActiveResultTab("technical");
+      }, 1500);
     } catch (error) {
+      // Reset analysis state
+      setIsAnalyzing(false);
+      setAnalysisComplete(false);
+      
       toast({
         title: "Analysis failed",
         description: error instanceof Error ? error.message : "Failed to analyze repository",
