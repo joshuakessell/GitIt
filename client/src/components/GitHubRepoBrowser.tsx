@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Markdown } from "@/components/ui/markdown";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { 
@@ -381,10 +382,33 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
                 <FileArchive className="h-4 w-4 mr-2" />
                 Upload Zip File
               </TabsTrigger>
-              <TabsTrigger value="github" className="flex items-center">
-                <Github className="h-4 w-4 mr-2" />
-                GitHub Repository
-              </TabsTrigger>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <TabsTrigger 
+                        value="github" 
+                        className={cn(
+                          "flex items-center",
+                          !isAuthenticated && "opacity-70 cursor-not-allowed"
+                        )}
+                        disabled={!isAuthenticated}
+                        onClick={(e) => {
+                          if (!isAuthenticated) e.preventDefault();
+                        }}
+                      >
+                        <Github className="h-4 w-4 mr-2" />
+                        GitHub Repository
+                      </TabsTrigger>
+                    </div>
+                  </TooltipTrigger>
+                  {!isAuthenticated && (
+                    <TooltipContent>
+                      <p className="text-sm">Sign in with GitHub to analyze your repositories</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </TabsList>
             
             <TabsContent value="upload" className="mt-4 space-y-4">

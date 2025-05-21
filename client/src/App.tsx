@@ -21,10 +21,8 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabKey>("code-to-text");
   const { user, isAuthenticated, isLoading } = useAuth();
   
-  // If user is not authenticated and tries to access repo browser, switch to code-to-text
-  if (!isLoading && !isAuthenticated && activeTab === "repo-browser") {
-    setActiveTab("code-to-text");
-  }
+  // All users can access the Repository Analyzer page now
+  // No need to redirect away from repo-browser if not authenticated
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="theme">

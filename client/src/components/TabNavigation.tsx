@@ -44,9 +44,10 @@ export function TabNavigation({ activeTab, onTabChange, isAuthenticated = false 
       <div className="hidden sm:block mb-6 animate-fadeIn">
         <nav className="flex space-x-4 p-1">
           {tabs.map((tab, index) => {
-            // Determine if this tab should show the GitHub authentication tooltip
+            // We no longer need to show authentication tooltip on the main tab
+            // since Repository Analyzer is fully accessible to all users
             const isRepoTab = tab.key === "repo-browser";
-            const needsAuthTooltip = isRepoTab && !isAuthenticated;
+            const needsAuthTooltip = false; // All users can access the Repository Analyzer page
             
             // Wrap the button in a tooltip if needed
             const tabButton = (
