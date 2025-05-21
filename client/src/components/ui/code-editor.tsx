@@ -55,7 +55,7 @@ export function CodeEditor({
     >
       {!value && !isFocused && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span className="text-gray-400 dark:text-gray-600">{placeholder}</span>
+          <span className="text-gray-400 dark:text-gray-500">{placeholder}</span>
         </div>
       )}
       <div className="relative">
@@ -66,7 +66,7 @@ export function CodeEditor({
           onBlur={() => setIsFocused(false)}
           className="absolute inset-0 w-full h-full p-3 font-mono bg-transparent resize-none text-transparent caret-gray-800 dark:caret-gray-200 z-10"
           spellCheck="false"
-          placeholder={placeholder}
+          placeholder=""
           readOnly={readOnly}
           aria-label={`Code editor for ${language}`}
         />
