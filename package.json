@@ -68,6 +68,7 @@
     "openai": "^4.100.0",
     "openid-client": "^6.5.0",
     "passport": "^0.7.0",
+    "passport-github2": "^0.1.12",
     "passport-local": "^1.0.0",
     "prism-react-renderer": "^2.4.1",
     "react": "^18.3.1",

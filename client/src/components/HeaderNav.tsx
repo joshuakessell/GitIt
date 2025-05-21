@@ -45,10 +45,11 @@ export function HeaderNav({ isLoggedIn = false, username }: HeaderNavProps) {
               </div>
             ) : (
               <div className="flex space-x-2">
-                <Button variant="ghost" size="sm">
-                  Login
-                </Button>
-                <Button size="sm" className="gap-2">
+                <Button 
+                  size="sm" 
+                  className="gap-2"
+                  onClick={() => window.location.href = '/api/auth/github'}
+                >
                   <Github className="h-4 w-4" />
                   Login with GitHub
                 </Button>
