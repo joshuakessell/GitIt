@@ -116,13 +116,45 @@ export const setupAuth = (app: Express): void => {
   }
 
   // Auth routes
-  app.get('/api/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
+  app.get('/api/auth/github', (req, res, next) => {
+    log(`GitHub auth route accessed from ${req.headers.host}`, 'auth:github');
+    
+    // Debug the request information
+    try {
+      log(`GitHub auth debug info - Headers: ${JSON.stringify(req.headers)}`, 'auth:github:debug');
+    } catch (error) {
+      log(`Could not stringify headers: ${error}`, 'auth:github:debug');
+    }
+    
+    passport.authenticate('github', { scope: ['user:email'] })(req, res, next);
+  });
 
   app.get(
     '/api/auth/github/callback',
-    passport.authenticate('github', { failureRedirect: '/' }),
-    (req: Request, res: Response) => {
-      res.redirect('/');
+    (req: Request, res: Response, next: NextFunction) => {
+      log(`GitHub callback received, authenticating user...`, 'auth:github:callback');
+      
+      passport.authenticate('github', { failureRedirect: '/' }, (err, user, info) => {
+        if (err) {
+          log(`GitHub authentication error: ${err}`, 'auth:github:error');
+          return res.redirect('/?auth_error=github_error');
+        }
+        
+        if (!user) {
+          log(`GitHub authentication failed: ${JSON.stringify(info)}`, 'auth:github:error');
+          return res.redirect('/?auth_error=no_user');
+        }
+        
+        req.login(user, (loginErr) => {
+          if (loginErr) {
+            log(`GitHub login error: ${loginErr}`, 'auth:github:error');
+            return res.redirect('/?auth_error=login_error');
+          }
+          
+          log(`GitHub authentication successful for user: ${JSON.stringify(user)}`, 'auth:github:success');
+          return res.redirect('/');
+        });
+      })(req, res, next);
     }
   );
 

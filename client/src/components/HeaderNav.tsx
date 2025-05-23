@@ -71,7 +71,18 @@ export function HeaderNav() {
                 <Button 
                   size="sm" 
                   className="gap-2"
-                  onClick={() => window.location.href = '/api/auth/github'}
+                  onClick={() => {
+                    // Log the action for debugging
+                    console.log("Initiating GitHub login flow");
+                    
+                    // Create a direct link element to ensure proper navigation
+                    const link = document.createElement('a');
+                    link.href = '/api/auth/github';
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
                 >
                   <Github className="h-4 w-4" />
                   Login with GitHub
