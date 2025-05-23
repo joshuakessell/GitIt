@@ -4,6 +4,30 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 
 const app = express();
+
+// Trust proxy for secure cookies behind Cloudflare or other proxies
+app.set('trust proxy', 1);
+
+// Configure CORS for proper cross-origin handling
+app.use((req, res, next) => {
+  // Set allowed origin based on environment
+  const allowedOrigin = process.env.NODE_ENV === 'production'
+    ? 'https://codexplainer.joshuakessell.com'
+    : req.headers.origin || '*';
+    
+  res.header('Access-Control-Allow-Origin', allowedOrigin);
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

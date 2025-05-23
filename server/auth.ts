@@ -29,7 +29,9 @@ export const setupAuth = (app: Express): void => {
       saveUninitialized: false,
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // Always use secure cookies
+        httpOnly: true,
+        sameSite: 'lax', // Better cross-site protection
       },
     })
   );
@@ -69,10 +71,16 @@ export const setupAuth = (app: Express): void => {
           clientID: process.env.GITHUB_CLIENT_ID,
           clientSecret: process.env.GITHUB_CLIENT_SECRET,
           callbackURL,
+          // Add these options to improve production compatibility
+          scope: ['user:email'],
+          proxy: true // Enable for running behind proxies like Cloudflare
         },
         // @ts-ignore - Ignoring type issues with GitHub strategy
         async (accessToken: string, refreshToken: string, profile: any, done: any) => {
           try {
+            // Log for debugging
+            log(`GitHub auth: Processing profile ${profile.id} (${profile.username})`, 'auth:github');
+            
             // Check if user exists
             const [existingUser] = await db
               .select()
@@ -80,17 +88,25 @@ export const setupAuth = (app: Express): void => {
               .where(eq(users.githubId, profile.id));
 
             if (existingUser) {
+              log(`GitHub auth: Found existing user ${existingUser.username}`, 'auth:github');
+              
               // Update access token
               await db
                 .update(users)
                 .set({
                   githubAccessToken: accessToken,
+                  // Update other fields that might have changed
+                  username: profile.username || existingUser.username,
+                  githubUsername: profile.username,
                 })
                 .where(eq(users.id, existingUser.id));
 
-              return done(null, existingUser);
+              const updatedUser = {...existingUser, githubAccessToken: accessToken};
+              return done(null, updatedUser);
             }
 
+            log(`GitHub auth: Creating new user for ${profile.username}`, 'auth:github');
+            
             // Create new user
             const [newUser] = await db
               .insert(users)
@@ -103,9 +119,10 @@ export const setupAuth = (app: Express): void => {
               })
               .returning();
 
+            log(`GitHub auth: Successfully created new user with ID ${newUser.id}`, 'auth:github');
             return done(null, newUser);
           } catch (error) {
-            log(`Error in GitHub auth strategy: ${error}`, 'auth');
+            log(`Error in GitHub auth strategy: ${error}`, 'auth:github:error');
             return done(error as Error, undefined);
           }
         }
