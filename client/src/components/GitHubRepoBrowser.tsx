@@ -517,9 +517,46 @@ export function GitHubRepoBrowser({ isAuthenticated = false }: GitHubRepoBrowser
                               size="sm" 
                               variant="secondary"
                               onClick={() => {
+                                // Instead of calling handleGitHubAnalysis immediately after setting state,
+                                // just analyze with the repo details directly
+                                setIsAnalyzing(true);
+                                setAnalysisProgress(0);
+                                setAnalysisComplete(false);
+                                
+                                // Store the values for display
                                 setRepoUrl(repo.html_url);
                                 setRepoName(repo.name);
-                                handleGitHubAnalysis();
+                                
+                                // Directly analyze using the repository data we already have
+                                githubMutation.mutate(
+                                  {
+                                    repositoryUrl: repo.html_url,
+                                    repositoryName: repo.name
+                                  },
+                                  {
+                                    onSuccess: (result) => {
+                                      setAnalysisProgress(100);
+                                      setAnalysisComplete(true);
+                                      
+                                      setTimeout(() => {
+                                        setIsAnalyzing(false);
+                                        setAnalysisComplete(false);
+                                        setSelectedAnalysis(result);
+                                        setActiveResultTab("technical");
+                                      }, 1500);
+                                    },
+                                    onError: (error) => {
+                                      setIsAnalyzing(false);
+                                      setAnalysisComplete(false);
+                                      
+                                      toast({
+                                        title: "Analysis failed",
+                                        description: error instanceof Error ? error.message : "Failed to analyze repository",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }
+                                );
                               }}
                             >
                               Analyze
