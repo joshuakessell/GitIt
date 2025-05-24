@@ -4,6 +4,7 @@ import { Code, FileText, Loader } from "lucide-react";
 import { getLanguageLabel } from "@/lib/languages";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "wouter";
 
 interface HistorySectionProps {
   historyItems?: HistoryItem[];
@@ -78,9 +79,11 @@ export function HistorySection({ historyItems = [] }: HistorySectionProps) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-medium">Recent Activity</h2>
         {itemsToRender.length > 5 && (
-          <button className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors">
-            View all
-          </button>
+          <Link href="/history">
+            <button className="text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors">
+              View all
+            </button>
+          </Link>
         )}
       </div>
       <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md transition-all duration-200">

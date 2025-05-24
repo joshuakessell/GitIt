@@ -60,6 +60,11 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={App} />
+      <Route path="/history" component={() => 
+        <QueryClientProvider client={queryClient}>
+          <HistoryPage />
+        </QueryClientProvider>
+      } />
       <Route component={NotFound} />
     </Switch>
   );
