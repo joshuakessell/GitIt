@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { HistoryItem } from "@/types";
+import { HistoryItem, RepositoryAnalysisListItem } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { getLanguageLabel } from "@/lib/languages";
 import { Link } from "wouter";
+import { useState } from "react";
 import {
   Code,
   FileText,
@@ -16,7 +17,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function HistoryPage() {
@@ -25,22 +25,22 @@ export default function HistoryPage() {
 
   // Fetch explanation history
   const { 
-    data: explanations, 
+    data: explanations = [], 
     isLoading: isExplanationsLoading 
   } = useQuery<HistoryItem[]>({
     queryKey: ['/api/history'],
     enabled: isAuthenticated,
-    retry: 1,
+    retry: 1
   });
 
   // Fetch repository analysis history
   const { 
-    data: analyses, 
+    data: analyses = [], 
     isLoading: isAnalysesLoading 
-  } = useQuery({
+  } = useQuery<RepositoryAnalysisListItem[]>({
     queryKey: ['/api/analyses'],
     enabled: isAuthenticated,
-    retry: 1,
+    retry: 1
   });
 
   const isLoading = isExplanationsLoading || isAnalysesLoading;
@@ -119,8 +119,8 @@ export default function HistoryPage() {
     );
   }
 
-  const hasExplanations = explanations && explanations.length > 0;
-  const hasAnalyses = analyses && analyses.length > 0;
+  const hasExplanations = explanations.length > 0;
+  const hasAnalyses = analyses.length > 0;
   
   // If no history at all
   if (!hasExplanations && !hasAnalyses) {
@@ -192,7 +192,7 @@ export default function HistoryPage() {
             Code Explanations
             {hasExplanations && (
               <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-primary-100 text-primary-900 dark:bg-primary-900 dark:text-primary-100">
-                {explanations?.length || 0}
+                {explanations.length}
               </span>
             )}
           </TabsTrigger>
@@ -201,7 +201,7 @@ export default function HistoryPage() {
             Repository Analyses
             {hasAnalyses && (
               <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-primary-100 text-primary-900 dark:bg-primary-900 dark:text-primary-100">
-                {analyses?.length || 0}
+                {analyses.length}
               </span>
             )}
           </TabsTrigger>
@@ -210,7 +210,7 @@ export default function HistoryPage() {
         <TabsContent value="explanations" className="space-y-4">
           {hasExplanations ? (
             <div className="grid gap-4">
-              {explanations?.map((item) => (
+              {explanations.map((item) => (
                 <Card key={item.id} className="overflow-hidden transition-all hover:shadow-md">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -254,7 +254,7 @@ export default function HistoryPage() {
         <TabsContent value="analyses" className="space-y-4">
           {hasAnalyses ? (
             <div className="grid gap-4">
-              {analyses?.map((analysis) => (
+              {analyses.map((analysis) => (
                 <Card key={analysis.id} className="overflow-hidden transition-all hover:shadow-md">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -273,9 +273,6 @@ export default function HistoryPage() {
                         <span>Files Analyzed:</span>
                         <span className="font-medium">{analysis.analyzedFiles} / {analysis.totalFiles}</span>
                       </div>
-                      <p className="line-clamp-2 text-muted-foreground">
-                        {analysis.analysisSummary || "Repository analysis summary not available"}
-                      </p>
                     </div>
                   </CardContent>
                   <CardFooter className="border-t border-gray-100 dark:border-gray-800 pt-3 flex justify-between">
@@ -314,6 +311,3 @@ function viewAnalysisDetails(id: number) {
   console.log("View analysis details for ID:", id);
   alert("View analysis details: " + id);
 }
-
-// Add useState import
-import { useState } from "react";
