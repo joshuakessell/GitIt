@@ -13,6 +13,7 @@ import { GitHubRepoBrowser } from "@/components/GitHubRepoBrowser";
 import { HistorySection } from "@/components/HistorySection";
 import { Footer } from "@/components/Footer";
 import NotFound from "@/pages/not-found";
+import HistoryPage from "./pages/history";
 import { useAuth } from "@/hooks/useAuth";
 
 type TabKey = "code-to-text" | "text-to-code" | "repo-browser";
