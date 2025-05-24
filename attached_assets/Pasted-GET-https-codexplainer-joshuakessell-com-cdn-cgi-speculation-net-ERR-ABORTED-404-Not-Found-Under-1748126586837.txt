@@ -1,0 +1,64 @@
+GET https://codexplainer.joshuakessell.com/cdn-cgi/speculation net::ERR_ABORTED 404 (Not Found)Understand this error
+codexplainer.joshuakessell.com/:1 Load failed or canceled (net::ERR_ABORTED; HTTP status 404) for rule set requested from "https://codexplainer.joshuakessell.com/cdn-cgi/speculation" found in Speculation-Rules header.Understand this warning
+index-CCzMVuha.js:194 
+            
+            
+           GET https://codexplainer.joshuakessell.com/api/history 500 (Internal Server Error)
+(anonymous) @ index-CCzMVuha.js:194
+i @ index-CCzMVuha.js:49
+m @ index-CCzMVuha.js:49
+start @ index-CCzMVuha.js:49
+fetch @ index-CCzMVuha.js:49
+mi @ index-CCzMVuha.js:49
+setOptions @ index-CCzMVuha.js:49
+(anonymous) @ index-CCzMVuha.js:49
+sl @ index-CCzMVuha.js:41
+ho @ index-CCzMVuha.js:41
+xk @ index-CCzMVuha.js:41
+mr @ index-CCzMVuha.js:41
+_h @ index-CCzMVuha.js:41
+fr @ index-CCzMVuha.js:39
+(anonymous) @ index-CCzMVuha.js:41
+setTimeout
+o @ index-CCzMVuha.js:49
+s @ index-CCzMVuha.js:49
+batch @ index-CCzMVuha.js:49
+cn @ index-CCzMVuha.js:49
+setData @ index-CCzMVuha.js:49
+onSuccess @ index-CCzMVuha.js:49
+f @ index-CCzMVuha.js:49
+Promise.then
+m @ index-CCzMVuha.js:49
+start @ index-CCzMVuha.js:49
+fetch @ index-CCzMVuha.js:49
+mi @ index-CCzMVuha.js:49
+onSubscribe @ index-CCzMVuha.js:49
+subscribe @ index-CCzMVuha.js:49
+(anonymous) @ index-CCzMVuha.js:49
+Ay @ index-CCzMVuha.js:39
+sl @ index-CCzMVuha.js:41
+ho @ index-CCzMVuha.js:41
+_h @ index-CCzMVuha.js:41
+fr @ index-CCzMVuha.js:39
+xk @ index-CCzMVuha.js:41
+mr @ index-CCzMVuha.js:41
+av @ index-CCzMVuha.js:41
+T @ index-CCzMVuha.js:26
+D @ index-CCzMVuha.js:26Understand this error
+[Violation] Forced reflow while executing JavaScript took 32ms
+[Violation] Forced reflow while executing JavaScript took 34ms
+LYD5EVBDo8JJszs-jFLgQ8AVaYGAUiozVTQRAj8eOsyJ4WpOa1Cu-4w6wmKmoXEAlkG_492VbksgOazV9-DLLQ==:2 
+            
+            
+           HEAD https://codexplainer.joshuakessell.com/LYD5EVBDo8JJszs-jFLgQ8AVaYGAUiozVTQRAj8eOsyJ4WpOa1Cu-4w6wmKmoXEAlkG_492VbksgOazV9-DLLQ== net::ERR_NETWORK_CHANGED
+m @ LYD5EVBDo8JJszs-jFLgQ8AVaYGAUiozVTQRAj8eOsyJ4WpOa1Cu-4w6wmKmoXEAlkG_492VbksgOazV9-DLLQ==:2
+h @ LYD5EVBDo8JJszs-jFLgQ8AVaYGAUiozVTQRAj8eOsyJ4WpOa1Cu-4w6wmKmoXEAlkG_492VbksgOazV9-DLLQ==:2
+i @ LYD5EVBDo8JJszs-jFLgQ8AVaYGAUiozVTQRAj8eOsyJ4WpOa1Cu-4w6wmKmoXEAlkG_492VbksgOazV9-DLLQ==:2
+setInterval
+(anonymous) @ LYD5EVBDo8JJszs-jFLgQ8AVaYGAUiozVTQRAj8eOsyJ4WpOa1Cu-4w6wmKmoXEAlkG_492VbksgOazV9-DLLQ==:2
+(anonymous) @ LYD5EVBDo8JJszs-jFLgQ8AVaYGAUiozVTQRAj8eOsyJ4WpOa1Cu-4w6wmKmoXEAlkG_492VbksgOazV9-DLLQ==:2Understand this error
+LYD5EVBDo8JJszs-jFLgQ8AVaYGAUiozVTQRAj8eOsyJ4WpOa1Cu-4w6wmKmoXEAlkG_492VbksgOazV9-DLLQ==:2 [Violation] 'setTimeout' handler took 60ms
+index-CCzMVuha.js:194 
+            
+            
+           GET https://codexplainer.joshuakessell.com/api/history net::ERR_QUIC_PROTOCOL_ERROR.QUIC_NETWORK_IDLE_TIMEOUT

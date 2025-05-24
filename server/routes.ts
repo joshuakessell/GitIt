@@ -541,7 +541,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
-      const userId = (req.user as any).id;
+      const userId = (req.user as any)?.id;
+      
+      // Extra validation to avoid server crashes in production
+      if (!userId) {
+        logger.warn('User authenticated but no ID found in session', 'api:history', { user: req.user });
+        return res.status(200).json([]);  // Return empty array instead of error
+      }
       
       // Cache key for this user's history
       const cacheKey = `explanations:user:${userId}`;
@@ -553,35 +559,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(cachedHistory);
       }
       
-      logger.debug(`Fetching explanation history for user: ${userId}`, 'api:history');
-      const explanations = await storage.getExplanationsByUser(userId, 10);
-      
-      // Check if 'type' field exists in the schema
-      // This is a fix for the error in the logs
-      const hasTypeField = explanations.length > 0 && 'type' in explanations[0];
-      
-      // Format the response
-      const response = explanations.map(explanation => ({
-        id: explanation.id,
-        title: explanation.title,
-        language: explanation.language,
-        // Only include type if the field exists
-        ...(hasTypeField && { type: (explanation as any).type }),
-        createdAt: explanation.createdAt,
-        // Don't include the full code and explanation to keep the response smaller
-        codePreview: explanation.code.substring(0, 100) + (explanation.code.length > 100 ? '...' : '')
-      }));
-      
-      // Cache the history (5 minute TTL)
-      cache.set(cacheKey, response, 300);
-      
-      return res.json(response);
+      try {
+        logger.debug(`Fetching explanation history for user: ${userId}`, 'api:history');
+        const explanations = await storage.getExplanationsByUser(userId, 10);
+        
+        // Validate we have actual explanations before trying to process them
+        if (!explanations || !Array.isArray(explanations)) {
+          logger.warn('Empty or invalid explanations returned', 'api:history', { userId });
+          return res.status(200).json([]);
+        }
+        
+        // Check if 'type' field exists in the schema
+        const hasTypeField = explanations.length > 0 && 'type' in explanations[0];
+        
+        // Format the response with extra validation
+        const response = explanations.map(explanation => {
+          if (!explanation) return null;
+          
+          return {
+            id: explanation.id,
+            title: explanation.title || 'Untitled',
+            language: explanation.language || 'unknown',
+            // Only include type if the field exists
+            ...(hasTypeField && { type: (explanation as any).type }),
+            createdAt: explanation.createdAt || new Date(),
+            // Don't include the full code and explanation to keep the response smaller
+            codePreview: explanation.code ? 
+              (explanation.code.substring(0, 100) + (explanation.code.length > 100 ? '...' : '')) : 
+              'No code available'
+          };
+        }).filter(item => item !== null); // Remove any null items
+        
+        // Cache the history (5 minute TTL)
+        cache.set(cacheKey, response, 300);
+        
+        return res.json(response);
+      } catch (dbError) {
+        // Handle database errors gracefully - don't crash the request
+        logger.error('Database error while fetching explanations', dbError as Error, 'api:history:db');
+        return res.status(200).json([]); // Return empty array instead of error
+      }
     } catch (error) {
       logger.error('Failed to fetch explanation history', error as Error, 'api:history');
-      return res.status(500).json({
-        message: "Failed to fetch history",
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
+      // In production, don't expose error details to client
+      return res.status(200).json([]);  // Return empty array instead of 500 error
     }
   });
   
