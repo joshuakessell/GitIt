@@ -4,8 +4,8 @@ import fs from "fs";
 import path from "path";
 import { ExplanationSettings, RepositoryAnalysisResponse } from "@shared/schema";
 
-// The newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const DEFAULT_MODEL = "gpt-4o";
+// Using gpt-4o-mini to avoid rate limiting issues while maintaining good performance
+const DEFAULT_MODEL = "gpt-4o-mini";
 
 export class OpenAIAPI {
   private client: OpenAI;
