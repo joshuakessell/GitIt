@@ -17,12 +17,7 @@ export function HistorySection({ historyItems = [] }: HistorySectionProps) {
   const { data: fetchedItems, isLoading } = useQuery<HistoryItem[]>({
     queryKey: ['/api/history'],
     enabled: isAuthenticated,
-    retry: 1,
-    // Gracefully handle errors in production
-    onError: (error) => {
-      console.log("History loading error:", error);
-      // Silent error handling - no toast notifications for history errors
-    }
+    retry: 1
   });
   
   // Show loading state

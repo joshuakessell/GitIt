@@ -492,7 +492,7 @@ export function CodeToTextConverter() {
 
             {/* Content State */}
             {mutation.isSuccess && mutation.data && (
-              <div className="h-80 overflow-y-auto code-area">
+              <div className="h-80 overflow-y-auto code-area p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md">
                 <Alert className="mb-4 border-green-500/50 text-green-700 dark:border-green-500 dark:text-green-300">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <AlertTitle>Analysis Complete</AlertTitle>
@@ -500,7 +500,7 @@ export function CodeToTextConverter() {
                     {language === 'auto' ? "Language was automatically detected" : `Code analyzed as ${language}`}
                   </AlertDescription>
                 </Alert>
-                <Markdown content={mutation.data.explanation} />
+                <Markdown content={mutation.data.explanation} className="select-text" />
               </div>
             )}
           </div>

@@ -19,7 +19,8 @@ export function Markdown({ content, className }: MarkdownProps) {
       });
       
       // Convert markdown to HTML
-      setHtml(marked.parse(content));
+      const parseResult = marked.parse(content);
+      Promise.resolve(parseResult).then(setHtml);
     } else {
       setHtml("");
     }
@@ -33,7 +34,7 @@ export function Markdown({ content, className }: MarkdownProps) {
   return (
     <div 
       className={cn(
-        "prose dark:prose-invert prose-primary max-w-none",
+        "prose dark:prose-invert prose-primary max-w-none select-text",
         "prose-headings:font-semibold prose-a:text-primary-500",
         "prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:rounded-md prose-code:px-1",
         className
